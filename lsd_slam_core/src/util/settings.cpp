@@ -101,7 +101,7 @@ float loopclosureStrictness = 1.5;
 float relocalizationTH = 0.7;
 
 
-bool saveKeyframes =  false;
+bool saveKeyframes =  true;
 bool saveAllTracked =  false;
 bool saveLoopClosureImages =  false;
 bool saveAllTrackingStages = false;
