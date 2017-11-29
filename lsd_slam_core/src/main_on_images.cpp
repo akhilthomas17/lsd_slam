@@ -123,6 +123,56 @@ int getFile (std::string source, std::vector<std::string> &files)
 
 }
 
+int getFileRgbdTUM (std::string source, std::vector<std::string> &files, std::vector<double> &timestamps)
+{
+	std::ifstream f(source.c_str());
+
+	if(f.good() && f.is_open())
+	{
+		while(!f.eof())
+		{
+			std::string l;
+			std::getline(f,l);
+
+			//l = trim(l);
+
+			if(l == "" || l[0] == '#')
+				continue;
+
+			// Split the string to separate timestamps and rgb image file name
+			std::istringstream iss(l);
+			std::vector<std::string> tokens{std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>{}};
+
+			timestamps.push_back(std::atof(tokens[0].c_str()));
+			files.push_back(tokens[1]);
+		}
+
+		f.close();
+
+		size_t sp = source.find_last_of('/');
+		std::string prefix;
+		if(sp == std::string::npos)
+			prefix = "";
+		else
+			prefix = source.substr(0,sp);
+
+		for(unsigned int i=0;i<files.size();i++)
+		{
+			if(files[i].at(0) != '/')
+				files[i] = prefix + "/" + files[i];
+		}
+
+		return (int)files.size();
+	}
+	else
+	{
+		f.close();
+		return -1;
+	}
+
+}
+
+
 
 using namespace lsd_slam;
 int main( int argc, char** argv )
@@ -182,6 +232,9 @@ int main( int argc, char** argv )
 	// open image files: first try to open as file.
 	std::string source;
 	std::vector<std::string> files;
+	// For reading timestamps from file
+	std::vector<double> timestamps;
+
 	if(!ros::param::get("~files", source))
 	{
 		printf("need source files! (set using _files:=FOLDER)\n");
@@ -194,7 +247,7 @@ int main( int argc, char** argv )
 	{
 		printf("found %d image files in folder %s!\n", (int)files.size(), source.c_str());
 	}
-	else if(getFile(source, files) >= 0)
+	else if(getFileRgbdTUM(source, files, timestamps) >= 0)
 	{
 		printf("found %d image files in file %s!\n", (int)files.size(), source.c_str());
 	}
@@ -203,8 +256,6 @@ int main( int argc, char** argv )
 		printf("could not load file list! wrong path / file?\n");
 	}
 
-
-
 	// get HZ
 	double hz = 0;
 	if(!ros::param::get("~hz", hz))
@@ -212,10 +263,9 @@ int main( int argc, char** argv )
 	ros::param::del("~hz");
 
 
-
 	cv::Mat image = cv::Mat(h,w,CV_8U);
 	int runningIDX=0;
-	float fakeTimeStamp = 0;
+	double fakeTimeStamp = 0;
 
 	ros::Rate r(hz);
 
@@ -238,12 +288,14 @@ int main( int argc, char** argv )
 		undistorter->undistort(imageDist, image);
 		assert(image.type() == CV_8U);
 
+        fakeTimeStamp = timestamps[i];
+        //printf("%f \n", fakeTimeStamp);
+
 		if(runningIDX == 0)
 			system->randomInit(image.data, fakeTimeStamp, runningIDX);
 		else
 			system->trackFrame(image.data, runningIDX ,hz == 0,fakeTimeStamp);
 		runningIDX++;
-		fakeTimeStamp+=0.03;
 
 		if(hz != 0)
 			r.sleep();
