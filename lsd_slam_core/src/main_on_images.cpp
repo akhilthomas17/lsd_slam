@@ -172,9 +172,9 @@ int getFileRgbdTUM (std::string source, std::vector<std::string> &files, std::ve
 
 }
 
-
-
 using namespace lsd_slam;
+
+
 int main( int argc, char** argv )
 {
 	ros::init(argc, argv, "LSD_SLAM");
@@ -321,6 +321,7 @@ int main( int argc, char** argv )
 
 
 	system->finalize();
+	system->savePosesTofile("lsd_slam_poses.txt");
 
 
 

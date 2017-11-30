@@ -62,6 +62,11 @@ public:
 	void applyPoseGraphOptResult();
 	Sim3 getCamToWorld(int recursionDepth = 0);
 	void invalidateCache();
+
+	static bool compareID (FramePoseStruct* fPS1, FramePoseStruct* fPS2) {
+        return (fPS1->frameID < fPS2->frameID);
+    }
+
 private:
 	int cacheValidFor;
 	static int cacheValidCounter;
