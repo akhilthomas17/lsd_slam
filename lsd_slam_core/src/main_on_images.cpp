@@ -123,53 +123,62 @@ int getFile (std::string source, std::vector<std::string> &files)
 
 }
 
-int getFileRgbdTUM (std::string source, std::vector<std::string> &files, std::vector<double> &timestamps)
+int getFileRgbdTUM (std::string rgb_path, std::vector<std::string> &rgb_files, std::vector<std::string> &depth_files, std::vector<double> &timestamps)
 {
-	std::ifstream f(source.c_str());
+    std::vector <std::string> sources;
+    sources.push_back(rgb_path);
+	sources.push_back(rgb_path.erase(rgb_path.find("rgb.txt")) + "depth.txt");
 
-	if(f.good() && f.is_open())
-	{
-		while(!f.eof())
-		{
-			std::string l;
-			std::getline(f,l);
+    std::vector < std::vector<std::string>* > files;
+    files.push_back(&rgb_files);
+    files.push_back(&depth_files);
 
-			//l = trim(l);
+    for (int ii = 0; ii < 2; ++ii) {
+        std::string source = sources[ii];
+        std::ifstream f(source.c_str());
 
-			if(l == "" || l[0] == '#')
-				continue;
+        if (f.good() && f.is_open()) {
+            while (!f.eof()) {
+                std::string l;
 
-			// Split the string to separate timestamps and rgb image file name
-			std::istringstream iss(l);
-			std::vector<std::string> tokens{std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>{}};
+                std::getline(f, l);
 
-			timestamps.push_back(std::atof(tokens[0].c_str()));
-			files.push_back(tokens[1]);
-		}
+                //l = trim(l);
 
-		f.close();
+                if (l == "" || l[0] == '#')
+                    continue;
 
-		size_t sp = source.find_last_of('/');
-		std::string prefix;
-		if(sp == std::string::npos)
-			prefix = "";
-		else
-			prefix = source.substr(0,sp);
+                // Split the string to separate timestamps and rgb image file name
+                std::istringstream iss(l);
+                std::vector<std::string> tokens{std::istream_iterator<std::string>{iss},
+                                                std::istream_iterator<std::string>{}};
+                if (ii==0)
+                    timestamps.push_back(std::atof(tokens[0].c_str()));
+                files[ii]->push_back(tokens[1]);
+            }
 
-		for(unsigned int i=0;i<files.size();i++)
-		{
-			if(files[i].at(0) != '/')
-				files[i] = prefix + "/" + files[i];
-		}
+            f.close();
 
-		return (int)files.size();
-	}
-	else
-	{
-		f.close();
-		return -1;
-	}
+            size_t sp = source.find_last_of('/');
+            std::string prefix;
+            if (sp == std::string::npos)
+                prefix = "";
+            else
+                prefix = source.substr(0, sp);
 
+            for (unsigned int i = 0; i < files[ii]->size(); i++) {
+                if (files[ii]->at(i)[0] != '/')
+                    files[ii]->at(i) = prefix + "/" + files[ii]->at(i);
+            }
+
+        } else {
+            f.close();
+            return -1;
+        }
+    }
+    std::cout << "Depth images: " << depth_files.size() << std::endl;
+    std::cout << "RGB images: " << rgb_files.size() << std::endl;
+    return (int) rgb_files.size();
 }
 
 using namespace lsd_slam;
@@ -229,27 +238,27 @@ int main( int argc, char** argv )
 
 
 
-	// open image files: first try to open as file.
+	// open image rgb_files: first try to open as file.
 	std::string source;
-	std::vector<std::string> files;
+	std::vector<std::string> rgb_files, depth_files;
 	// For reading timestamps from file
 	std::vector<double> timestamps;
 
 	if(!ros::param::get("~files", source))
 	{
-		printf("need source files! (set using _files:=FOLDER)\n");
+		printf("need source rgb_files! (set using _files:=FOLDER)\n");
 		exit(0);
 	}
 	ros::param::del("~files");
 
 
-	if(getdir(source, files) >= 0)
+	if(getdir(source, rgb_files) >= 0)
 	{
-		printf("found %d image files in folder %s!\n", (int)files.size(), source.c_str());
+		printf("found %d image rgb_files in folder %s!\n", (int)rgb_files.size(), source.c_str());
 	}
-	else if(getFileRgbdTUM(source, files, timestamps) >= 0)
+	else if(getFileRgbdTUM(source, rgb_files, depth_files, timestamps) >= 0)
 	{
-		printf("found %d image files in file %s!\n", (int)files.size(), source.c_str());
+		printf("found %d image rgb_files in file %s!\n", (int)rgb_files.size(), source.c_str());
 	}
 	else
 	{
@@ -269,17 +278,17 @@ int main( int argc, char** argv )
 
 	ros::Rate r(hz);
 
-	for(unsigned int i=0;i<files.size();i++)
+	for(unsigned int i=0;i<rgb_files.size();i++)
 	{
-		cv::Mat imageDist = cv::imread(files[i], CV_LOAD_IMAGE_GRAYSCALE);
+		cv::Mat imageDist = cv::imread(rgb_files[i], CV_LOAD_IMAGE_GRAYSCALE);
 
 		if(imageDist.rows != h_inp || imageDist.cols != w_inp)
 		{
 			if(imageDist.rows * imageDist.cols == 0)
-				printf("failed to load image %s! skipping.\n", files[i].c_str());
+				printf("failed to load image %s! skipping.\n", rgb_files[i].c_str());
 			else
 				printf("image %s has wrong dimensions - expecting %d x %d, found %d x %d. Skipping.\n",
-						files[i].c_str(),
+						rgb_files[i].c_str(),
 						w,h,imageDist.cols, imageDist.rows);
 			continue;
 		}
