@@ -493,7 +493,7 @@ UndistorterOpenCV::UndistorterOpenCV(const char* configFileName)
 	else if(l3 == "none")
 	{
 		printf("NO RECTIFICATION\n");
-		valid = false;
+        //valid = false;
 	}
 	else
 	{

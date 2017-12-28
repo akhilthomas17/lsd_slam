@@ -32,6 +32,16 @@ find_package(Eigen REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(Boost REQUIRED COMPONENTS thread)
 
+set(QGLVIEWER_INCLUDE_DIR /misc/lmbraid19/thomasa/local/usr/local/include/QGLViewer)
+
+set(QGLVIEWER_LIBRARY /misc/lmbraid19/thomasa/local/usr/local/lib/libQGLViewer.so)
+
+
+MESSAGE( STATUS "QGLVIEWER_INCLUDE_DIR:         " ${QGLVIEWER_INCLUDE_DIR} )
+MESSAGE( STATUS "QT_INCLUDES:         " ${QT_INCLUDES} )
+MESSAGE( STATUS "catkin_INCLUDE_DIRS:         " ${catkin_INCLUDE_DIRS} )
+MESSAGE( STATUS "EIGEN_INCLUDE_DIR:         " ${EIGEN_INCLUDE_DIR} )
+
 include_directories(${QGLVIEWER_INCLUDE_DIR}
 		    ${catkin_INCLUDE_DIRS} 
 		    ${EIGEN_INCLUDE_DIR}
@@ -69,6 +79,10 @@ set(HEADER_FILES
 include_directories(
   ${PROJECT_SOURCE_DIR}/thirdparty/Sophus
 )  
+
+MESSAGE( STATUS "QGLViewer_LIBRARIES:         " ${QGLViewer_LIBRARIES} )
+MESSAGE( STATUS "QGLVIEWER_LIBRARY:         " ${QGLVIEWER_LIBRARY} )
+MESSAGE( STATUS "QT_LIBRARIES:         " ${QT_LIBRARIES} )
 
 add_executable(viewer src/main_viewer.cpp ${SOURCE_FILES} ${HEADER_FILES})
 target_link_libraries(viewer ${QGLViewer_LIBRARIES}
