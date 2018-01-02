@@ -110,6 +110,7 @@ public:
 	
 	std::vector<FramePoseStruct*, Eigen::aligned_allocator<lsd_slam::FramePoseStruct*> > getAllPoses();
 
+	void savePosesTofile(const std::string& filename);
 
 
 	float msTrackFrame, msOptimizationIteration, msFindConstraintsItaration, msFindReferences;
