@@ -23,6 +23,15 @@ set(QT_USE_QTOPENGL TRUE)
 set(QT_USE_QTXML TRUE)
 find_package(QGLViewer REQUIRED)
 find_package(Eigen3 REQUIRED)
+
+set(QGLVIEWER_INCLUDE_DIR /misc/lmbraid19/thomasa/local/usr/local/include/QGLViewer)
+
+set(QGLVIEWER_LIBRARY /misc/lmbraid19/thomasa/local/usr/local/lib/libQGLViewer.so)
+
+MESSAGE( STATUS "QGLVIEWER_INCLUDE_DIR:         " ${QGLVIEWER_INCLUDE_DIR} )
+MESSAGE( STATUS "QT_INCLUDES:         " ${QT_INCLUDES} )
+
+
 include_directories(${QT_INCLUDES} ${EIGEN3_INCLUDE_DIR} ${QGLVIEWER_INCLUDE_DIR})
 
 rosbuild_find_ros_package(dynamic_reconfigure)
