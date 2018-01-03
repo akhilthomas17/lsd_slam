@@ -122,7 +122,7 @@ SlamSystem::SlamSystem(int w, int h, Eigen::Matrix3f K, bool enableSLAM)
 	nTrackFrame = nOptimizationIteration = nFindConstraintsItaration = nFindReferences = 0;
 	nAvgTrackFrame = nAvgOptimizationIteration = nAvgFindConstraintsItaration = nAvgFindReferences = 0;
 	gettimeofday(&lastHzUpdate, NULL);
-	
+
 	keyFrameChanged = false;
 
 }
@@ -1722,16 +1722,22 @@ void SlamSystem::savePosesTofile(const std::string& filename){
 		if(pose->isInGraph){
 			printf("FrameID: %d\n", pose->frameID);
 			double timestamp = pose->frame->timestamp();			
-			float* camToWorld = new float[7];
-			memcpy(camToWorld, pose->getCamToWorld().cast<float>().data(), sizeof(float)*7);
-			
+			//float* camToWorld = new float[7];
+			//memcpy(camToWorld, pose->getCamToWorld().cast<float>().data(), sizeof(float)*7);
+            Sophus::Quaternionf quat = pose->getCamToWorld().quaternion().cast<float>();
+            Eigen::Vector3f trans = pose->getCamToWorld().translation().cast<float>();
+
 			f << timestamp;
+            f << " " << trans[0] << " " << trans[1] << " " << trans[2];
+            f << " " << quat.x() << quat.y() << quat.z() << quat.w();
+            /*
 			for (int i = 0; i < 7; ++i){
 				f << " " << *(camToWorld + i);
 			}
+             */
 			f << "\n";
 			
-			delete camToWorld;
+			//delete camToWorld;
 		}
 	}
 	printf("Finished writing poses!\n");
