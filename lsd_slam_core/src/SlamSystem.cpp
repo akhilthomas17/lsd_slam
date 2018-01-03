@@ -122,6 +122,8 @@ SlamSystem::SlamSystem(int w, int h, Eigen::Matrix3f K, bool enableSLAM)
 	nTrackFrame = nOptimizationIteration = nFindConstraintsItaration = nFindReferences = 0;
 	nAvgTrackFrame = nAvgOptimizationIteration = nAvgFindConstraintsItaration = nAvgFindReferences = 0;
 	gettimeofday(&lastHzUpdate, NULL);
+	
+	keyFrameChanged = false;
 
 }
 
@@ -782,6 +784,7 @@ bool SlamSystem::doMappingIteration()
 
 		if (createNewKeyFrame)
 		{
+			keyFrameChanged = true;
 			finishCurrentKeyframe();
 			changeKeyframe(false, true, 1.0f);
 
@@ -1686,6 +1689,16 @@ SE3 SlamSystem::getCurrentPoseEstimate()
 		camToWorld = se3FromSim3(keyFrameGraph->allFramePoses.back()->getCamToWorld());
 	keyFrameGraph->allFramePosesMutex.unlock_shared();
 	return camToWorld;
+}
+
+// Added by Akhil
+SE3 SlamSystem::getLastKeyFramePose()
+{
+	SE3 camToWorld = SE3();
+	currentKeyFrameMutex.lock();
+	camToWorld = se3FromSim3(trackingReferenceFrameSharedPT->getScaledCamToWorld());
+	currentKeyFrameMutex.unlock();
+	return camToWorld;	
 }
 
 std::vector<FramePoseStruct*, Eigen::aligned_allocator<FramePoseStruct*> > SlamSystem::getAllPoses()
