@@ -136,6 +136,12 @@ void LiveSLAMWrapper::newImageCallback(const cv::Mat& img, Timestamp imgTime)
 	{
 		monoOdometry->trackFrame(grayImg.data,imageSeqNumber,false,imgTime.toSec());
 	}
+    if (monoOdometry->keyFrameChanged)
+    {
+        logCameraPose(monoOdometry->getLastKeyFramePose(), imgTime.toSec());
+        monoOdometry->keyFrameChanged = false;
+    }
+
 }
 
 void LiveSLAMWrapper::logCameraPose(const SE3& camToWorld, double time)
