@@ -66,6 +66,7 @@ public:
 	const bool SLAMEnabled;
 
 	bool trackingIsGood;
+	bool keyFrameChanged;
 
 
 	SlamSystem(int w, int h, Eigen::Matrix3f K, bool enableSLAM = true);
@@ -95,7 +96,10 @@ public:
 	/** Returns the current pose estimate. */
 	SE3 getCurrentPoseEstimate();
 
-	/** Sets the visualization where point clouds and camera poses will be sent to. */
+    /** (Akhil) Return pose of last finalized keyframe */
+    SE3 getLastKeyFramePose();
+
+    /** Sets the visualization where point clouds and camera poses will be sent to. */
 	void setVisualization(Output3DWrapper* outputWrapper);
 
 	void requestDepthMapScreenshot(const std::string& filename);
