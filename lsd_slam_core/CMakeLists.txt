@@ -96,3 +96,6 @@ target_link_libraries(live_slam lsdslam)
 rosbuild_add_executable(dataset_slam src/main_on_images.cpp)
 target_link_libraries(dataset_slam lsdslam)
 
+# build node to use with deepTAM
+rosbuild_add_executable(deepTAM_live_slam src/main_live_odometry_reinforced.cpp)
+target_link_libraries(deepTAM_live_slam lsdslam)
