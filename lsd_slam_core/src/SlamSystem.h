@@ -122,15 +122,13 @@ public:
 	float nAvgTrackFrame, nAvgOptimizationIteration, nAvgFindConstraintsItaration, nAvgFindReferences;
 	struct timeval lastHzUpdate;
 
+protected:
+
+        // ============= EXCLUSIVELY TRACKING THREAD (+ init) ===============
+        TrackingReference* trackingReference; // tracking reference for current keyframe. only used by tracking.
+        SE3Tracker* tracker;
 
 private:
-
-
-	// ============= EXCLUSIVELY TRACKING THREAD (+ init) ===============
-	TrackingReference* trackingReference; // tracking reference for current keyframe. only used by tracking.
-	SE3Tracker* tracker;
-
-
 
 	// ============= EXCLUSIVELY MAPPING THREAD (+ init) =============
 	DepthMap* map;

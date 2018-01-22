@@ -18,12 +18,12 @@
 * along with LSD-SLAM. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "LiveSLAMWrapper.h"
+#include "LiveSLAMWrapperReinforced.h"
 
 #include <boost/thread.hpp>
 #include "util/settings.h"
 #include "util/globalFuncs.h"
-#include "SlamSystem.h"
+#include "SlamSystemReinforced.h"
 
 
 #include "IOWrapper/ROS/ROSImageStreamThread.h"
@@ -60,7 +60,7 @@ int main( int argc, char** argv )
 	inputStream->run();
 
 	Output3DWrapper* outputWrapper = new ROSOutput3DWrapper(inputStream->width(), inputStream->height());
-	LiveSLAMWrapper slamNode(inputStream, outputWrapper);
+	LiveSLAMWrapperReinforced slamNode(inputStream, outputWrapper);
 	slamNode.Loop();
 
 

@@ -74,7 +74,7 @@ public:
 	
 	inline SlamSystem* getSlamSystem() {return monoOdometry;}
 	
-private:
+protected:
 	
 	InputImageStream* imageStream;
 	Output3DWrapper* outputWrapper;

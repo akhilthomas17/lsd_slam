@@ -7,6 +7,7 @@
 #pragma once
 #include "Tracking/SE3Tracker.h"
 #include <reinforced_visual_slam/TrackImage.h>
+#include "ros/ros.h"
 
 namespace lsd_slam
 {
@@ -17,8 +18,11 @@ class DeepTAMTracker: public SE3Tracker
 {
 public:
     DeepTAMTracker(int w, int h, Eigen::Matrix3f K);
-    ~DeepTAMTracker();
     SE3 trackFrameDeepTAM(TrackingReference* reference, Frame* frame, const SE3& frameToReference_initialEstimate);
-}
+
+private:
+    ros::NodeHandle nh;
+    ros::ServiceClient client;
+};
 
 }

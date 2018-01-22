@@ -48,7 +48,9 @@ set(lsd_SOURCE_FILES
   ${PROJECT_SOURCE_DIR}/src/DataStructures/FramePoseStruct.cpp
   ${PROJECT_SOURCE_DIR}/src/DataStructures/FrameMemory.cpp
   ${PROJECT_SOURCE_DIR}/src/SlamSystem.cpp
+  ${PROJECT_SOURCE_DIR}/src/SlamSystemReinforced.cpp
   ${PROJECT_SOURCE_DIR}/src/LiveSLAMWrapper.cpp
+  ${PROJECT_SOURCE_DIR}/src/LiveSLAMWrapperReinforced.cpp
   ${PROJECT_SOURCE_DIR}/src/DepthEstimation/DepthMap.cpp
   ${PROJECT_SOURCE_DIR}/src/DepthEstimation/DepthMapPixelHypothesis.cpp
   ${PROJECT_SOURCE_DIR}/src/util/globalFuncs.cpp
@@ -58,6 +60,7 @@ set(lsd_SOURCE_FILES
   ${PROJECT_SOURCE_DIR}/src/Tracking/Sim3Tracker.cpp
   ${PROJECT_SOURCE_DIR}/src/Tracking/Relocalizer.cpp
   ${PROJECT_SOURCE_DIR}/src/Tracking/SE3Tracker.cpp
+  ${PROJECT_SOURCE_DIR}/src/Tracking/DeepTAMTracker.cpp
   ${PROJECT_SOURCE_DIR}/src/Tracking/TrackingReference.cpp
   ${PROJECT_SOURCE_DIR}/src/IOWrapper/Timestamp.cpp
   ${PROJECT_SOURCE_DIR}/src/GlobalMapping/FabMap.cpp
