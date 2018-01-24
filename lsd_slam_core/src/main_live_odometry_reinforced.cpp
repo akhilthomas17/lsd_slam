@@ -48,6 +48,7 @@ int main( int argc, char** argv )
 	packagePath = ros::package::getPath("lsd_slam_core")+"/";
 
 	InputImageStream* inputStream = new ROSImageStreamThread();
+	inputStream->init();
 
 	std::string calibFile;
 	if(ros::param::get("~calib", calibFile))

@@ -39,11 +39,6 @@ using namespace cv;
 
 ROSImageStreamThread::ROSImageStreamThread()
 {
-	// subscribe
-	vid_channel = nh_.resolveName("image");
-	vid_sub          = nh_.subscribe(vid_channel,1, &ROSImageStreamThread::vidCb, this);
-
-
 	// wait for cam calib
 	width_ = height_ = 0;
 
@@ -58,6 +53,13 @@ ROSImageStreamThread::ROSImageStreamThread()
 ROSImageStreamThread::~ROSImageStreamThread()
 {
 	delete imageBuffer;
+}
+
+void ROSImageStreamThread::init()
+{
+    // subscribe
+    vid_channel = nh_.resolveName("image");
+    vid_sub          = nh_.subscribe(vid_channel,1, &ROSImageStreamThread::vidCb, this);
 }
 
 void ROSImageStreamThread::setCalibration(std::string file)
@@ -114,9 +116,7 @@ void ROSImageStreamThread::vidCb(const sensor_msgs::ImageConstPtr img)
 {
 	if(!haveCalib) return;
 
-        //(akhil) Modified code so as to save images as RGB in the buffer
-	//cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::MONO8);
-	cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::RGB8);
+	cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::MONO8);
 
 	if(img->header.seq < (unsigned int)lastSEQ)
 	{

@@ -43,6 +43,8 @@ public:
 	 */
 	virtual void run() {};
 
+	virtual void init(){};
+
 
 	virtual void setCalibration(std::string file) {};
 

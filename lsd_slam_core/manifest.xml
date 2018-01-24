@@ -9,6 +9,7 @@
   <review status="unreviewed" notes=""/>
   <url>http://vision.in.tum.de/lsdslam</url>
   <depend package="cv_bridge"/>
+  <depend package="message_filters"/>
   <depend package="dynamic_reconfigure"/>
   <depend package="sensor_msgs"/>
   <depend package="roslib"/>

@@ -53,6 +53,9 @@ public:
 	 */
 	void run();
 	
+	// (Added by Akhil): To initialize the subscribers	
+	void init();
+
 	void setCalibration(std::string file);
 
 	/**
@@ -64,7 +67,7 @@ public:
 	void vidCb(const sensor_msgs::ImageConstPtr img);
 	void infoCb(const sensor_msgs::CameraInfoConstPtr info);
 
-private:
+protected:
 
 	bool haveCalib;
 	Undistorter* undistorter;
