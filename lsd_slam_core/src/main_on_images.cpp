@@ -234,6 +234,7 @@ int main( int argc, char** argv )
 
 	// make slam system
 	SlamSystem* system = new SlamSystem(w, h, K, doSlam);
+	system->init(w, h, K);
 	system->setVisualization(outputWrapper);
 
 
@@ -322,6 +323,7 @@ int main( int argc, char** argv )
 			delete system;
 
 			system = new SlamSystem(w, h, K, doSlam);
+			system->init(w, h, K);
 			system->setVisualization(outputWrapper);
 
 			fullResetRequested = false;

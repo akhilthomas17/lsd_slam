@@ -3,11 +3,14 @@
 * Copyright 2018 Akhil Thomas <thomasa at informatik dot uni-freiburg dot de>, University of Freiburg
 *
 */
-
 #pragma once
 #include "Tracking/SE3Tracker.h"
+#include "Tracking/TrackingReference.h"
+#include "DataStructures/Frame.h"
+
 #include <reinforced_visual_slam/TrackImage.h>
-#include "ros/ros.h"
+#include <ros/ros.h>
+#include <cv_bridge/cv_bridge.h>
 
 namespace lsd_slam
 {

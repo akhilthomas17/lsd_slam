@@ -26,13 +26,7 @@ void init();
  */
 void rgbdCb(const sensor_msgs::ImageConstPtr &img, const sensor_msgs::ImageConstPtr &depth);
 
-/**
- * Gets the NotifyBuffer to which incoming depth images are stored.
- */
-inline NotifyBuffer<TimestampedMat>* getDepthBuffer() {return depthBuffer;};
-
 protected:
-NotifyBuffer<TimestampedMat>* depthBuffer;
 message_filters::Subscriber<sensor_msgs::Image> rgb_sub;
 message_filters::Subscriber<sensor_msgs::Image> depth_sub;
 std::string depth_channel;

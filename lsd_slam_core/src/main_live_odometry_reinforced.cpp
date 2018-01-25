@@ -26,7 +26,7 @@
 #include "SlamSystemReinforced.h"
 
 
-#include "IOWrapper/ROS/ROSImageStreamThread.h"
+#include "IOWrapper/ROS/ROSRGBDStreamThread.h"
 #include "IOWrapper/ROS/ROSOutput3DWrapper.h"
 #include "IOWrapper/ROS/rosReconfigure.h"
 
@@ -47,7 +47,7 @@ int main( int argc, char** argv )
 
 	packagePath = ros::package::getPath("lsd_slam_core")+"/";
 
-	InputImageStream* inputStream = new ROSImageStreamThread();
+	InputImageStream* inputStream = new ROSRGBDStreamThread();
 	inputStream->init();
 
 	std::string calibFile;

@@ -74,6 +74,9 @@ public:
 	SlamSystem& operator=(const SlamSystem&) = delete;
 	~SlamSystem();
 
+	/** Added by akhil */
+	void init(int w, int h, Eigen::Matrix3f K);
+
 	void randomInit(uchar* image, double timeStamp, int id);
 	void gtDepthInit(uchar* image, float* depth, double timeStamp, int id);
 
@@ -124,11 +127,8 @@ public:
 
 protected:
 
-        // ============= EXCLUSIVELY TRACKING THREAD (+ init) ===============
-        TrackingReference* trackingReference; // tracking reference for current keyframe. only used by tracking.
-        SE3Tracker* tracker;
-
-private:
+    // ============= EXCLUSIVELY TRACKING THREAD (+ init) ===============
+    TrackingReference* trackingReference; // tracking reference for current keyframe. only used by tracking.
 
 	// ============= EXCLUSIVELY MAPPING THREAD (+ init) =============
 	DepthMap* map;
@@ -272,6 +272,8 @@ private:
 
 	void optimizationThreadLoop();
 
+private:
+	SE3Tracker* tracker;
 	
 };
 

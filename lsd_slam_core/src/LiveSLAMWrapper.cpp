@@ -62,7 +62,7 @@ LiveSLAMWrapper::LiveSLAMWrapper(InputImageStream* imageStream, Output3DWrapper*
 
 	// make Odometry
 	monoOdometry = new SlamSystem(width, height, K_sophus, doSlam);
-
+	monoOdometry->init(width, height, K_sophus);
 	monoOdometry->setVisualization(outputWrapper);
 
 	imageSeqNumber = 0;
@@ -181,6 +181,7 @@ void LiveSLAMWrapper::resetAll()
 		Sophus::Matrix3f K;
 		K << fx, 0.0, cx, 0.0, fy, cy, 0.0, 0.0, 1.0;
 		monoOdometry = new SlamSystem(width,height,K, doSlam);
+		monoOdometry->init(width,height, K);
 		monoOdometry->setVisualization(outputWrapper);
 
 	}

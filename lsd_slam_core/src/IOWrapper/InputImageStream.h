@@ -49,10 +49,14 @@ public:
 	virtual void setCalibration(std::string file) {};
 
 	/**
-	 * Gets the NotifyBuffer to which incoming images are stored.
+	 * Gets the NotifyBuffer to which incoming rgb images are stored.
 	 */
 	inline NotifyBuffer<TimestampedMat>* getBuffer() {return imageBuffer;};
 
+	/**
+         * Gets the NotifyBuffer to which incoming depth images are stored.
+         */
+        inline NotifyBuffer<TimestampedMat>* getDepth() {return depthBuffer;};
 
 	/**
 	 * Gets the Camera Calibration. To avoid any dependencies, just as simple float / int's.
@@ -66,6 +70,7 @@ public:
 
 protected:
 	NotifyBuffer<TimestampedMat>* imageBuffer;
+	NotifyBuffer<TimestampedMat>* depthBuffer;
 	float fx_, fy_, cx_, cy_;
 	int width_, height_;
 };

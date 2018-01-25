@@ -20,8 +20,11 @@ public:
 	/** Resets everything, starting the odometry from the beginning again. */
 	void resetAll();
 
-	/** Callback function for new RGB images. */
-	void newImageCallback(const cv::Mat& img, Timestamp imgTime);
+	/** Loop function that keeps on looking for new images and feeds it to the SLAM System */
+	void Loop();
+
+	/** Callback function for new RGBD images. */
+	void newImageCallback(cv::Mat& rgbImg, Timestamp imgTime, cv::Mat&depthImg, Timestamp depthTime);
 
 	inline SlamSystemReinforced* getSlamSystem() {return monoOdometry;}
 

@@ -27,6 +27,7 @@
 #include "DataStructures/FrameMemory.h"
 #include "unordered_set"
 #include "util/settings.h"
+#include <opencv2/core/core.hpp>
 
 
 namespace lsd_slam
@@ -44,14 +45,19 @@ public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	friend class FrameMemory;
 
-
 	Frame(int id, int width, int height, const Eigen::Matrix3f& K, double timestamp, const unsigned char* image);
 
 	Frame(int id, int width, int height, const Eigen::Matrix3f& K, double timestamp, const float* image);
 
 	~Frame();
 	
-	
+	/** (Added by Akhil) To import cv::Mat RGB Images **/
+	void setCVImages(cv::Mat *imgRGB, cv::Mat *imgDepth)
+	{
+	    data.rgbImage = imgRGB;
+	    data.depthImage = imgDepth;
+	}
+
 	/** Sets or updates idepth and idepthVar on level zero. Invalidates higher levels. */
 	void setDepth(const DepthMapPixelHypothesis* newDepth);
 
@@ -112,6 +118,8 @@ public:
 	inline bool* refPixelWasGood();
 	inline bool* refPixelWasGoodNoCreate();
 	inline void clear_refPixelWasGood();
+	inline cv::Mat* rgbMat();
+	inline cv::Mat* depthMat();
 
 	/** Flags for use with require() and requirePyramid(). See the Frame class
 	  * documentation for their exact meaning. */
@@ -240,7 +248,9 @@ private:
 		
 		double timestamp;
 
-		
+		cv::Mat* rgbImage;
+		cv::Mat* depthImage;
+
 		float* image[PYRAMID_LEVELS];
 		bool imageValid[PYRAMID_LEVELS];
 		
@@ -448,5 +458,14 @@ inline void Frame::clear_refPixelWasGood()
 	data.refPixelWasGood=0;
 }
 
+inline cv::Mat* Frame::rgbMat()
+{
+	return data.rgbImage;
+}
+
+inline cv::Mat* Frame::depthMat()
+{
+	return data.depthImage;
+}
 
 }

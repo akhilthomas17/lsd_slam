@@ -75,10 +75,6 @@ SlamSystem::SlamSystem(int w, int h, Eigen::Matrix3f K, bool enableSLAM)
 	haveUnmergedOptimizationOffset = false;
 
 
-	tracker = new SE3Tracker(w,h,K);
-	// Do not use more than 4 levels for odometry tracking
-	for (int level = 4; level < PYRAMID_LEVELS; ++level)
-		tracker->settings.maxItsPerLvl[level] = 0;
 	trackingReference = new TrackingReference();
 	mappingTrackingReference = new TrackingReference();
 
@@ -169,6 +165,15 @@ SlamSystem::~SlamSystem()
 
 	Util::closeAllWindows();
 }
+
+void SlamSystem::init(int w, int h, Eigen::Matrix3f K)
+{
+	tracker = new SE3Tracker(w,h,K);
+	// Do not use more than 4 levels for odometry tracking
+	for (int level = 4; level < PYRAMID_LEVELS; ++level)
+		tracker->settings.maxItsPerLvl[level] = 0;
+}
+
 
 void SlamSystem::setVisualization(Output3DWrapper* outputWrapper)
 {
