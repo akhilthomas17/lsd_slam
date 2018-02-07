@@ -52,7 +52,7 @@ public:
 	~Frame();
 	
 	/** (Added by Akhil) To import cv::Mat RGB Images **/
-	void setCVImages(cv::Mat *imgRGB, cv::Mat *imgDepth)
+	void setCVImages(cv::Mat imgRGB, cv::Mat imgDepth)
 	{
 	    data.rgbImage = imgRGB;
 	    data.depthImage = imgDepth;
@@ -248,8 +248,8 @@ private:
 		
 		double timestamp;
 
-		cv::Mat* rgbImage;
-		cv::Mat* depthImage;
+		cv::Mat rgbImage;
+		cv::Mat depthImage;
 
 		float* image[PYRAMID_LEVELS];
 		bool imageValid[PYRAMID_LEVELS];
@@ -460,12 +460,12 @@ inline void Frame::clear_refPixelWasGood()
 
 inline cv::Mat* Frame::rgbMat()
 {
-	return data.rgbImage;
+	return &(data.rgbImage);
 }
 
 inline cv::Mat* Frame::depthMat()
 {
-	return data.depthImage;
+	return &(data.depthImage);
 }
 
 }

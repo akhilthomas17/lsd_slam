@@ -39,6 +39,7 @@ SlamSystemReinforced::SlamSystemReinforced(int w, int h, Eigen::Matrix3f K, bool
     // Do not use more than 4 levels for odometry tracking
     for (int level = 4; level < PYRAMID_LEVELS; ++level)
         tracker->settings.maxItsPerLvl[level] = 0;
+    printf("Started SlamSystemReinforced\n");
 }
 
 
@@ -49,12 +50,16 @@ void SlamSystemReinforced::gtDepthInit(cv::Mat* rgb, cv::Mat* depth, double time
     cv::Mat grayImg;
 	cvtColor(*rgb, grayImg, CV_RGB2GRAY);
 
+	// Scaling the depth Image (If input is in millimeters)
+	// cv::Mat depthImg;
+	//depth->convertTo(depthImg, CV_32FC1, 0.001);
+
 	currentKeyFrameMutex.lock();
 
 	currentKeyFrame.reset(new Frame(id, width, height, K, timeStamp, grayImg.data));
 	currentKeyFrame->setDepthFromGroundTruth(reinterpret_cast<float*>(depth->data));
 	// Adding CV Mat rgb and depth image pointers to the saved Frame
-	currentKeyFrame->setCVImages(rgb, depth);
+	currentKeyFrame->setCVImages(rgb->clone(), depth->clone());
 
 	map->initializeFromGTDepth(currentKeyFrame.get());
 	keyFrameGraph->addFrame(currentKeyFrame.get());
@@ -80,7 +85,7 @@ void SlamSystemReinforced::trackFrame(cv::Mat* rgb, cv::Mat* depth, unsigned int
 
 	// Create new frame
 	std::shared_ptr<Frame> trackingNewFrame(new Frame(frameID, width, height, K, timestamp, grayImg.data));
-	trackingNewFrame->setCVImages(rgb, depth);
+	trackingNewFrame->setCVImages(rgb->clone(), depth->clone());
 
 	if(!trackingIsGood)
 	{

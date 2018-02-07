@@ -25,6 +25,7 @@ LiveSLAMWrapperReinforced::LiveSLAMWrapperReinforced(InputImageStream* imageStre
 	// make Odometry
 	monoOdometry = new SlamSystemReinforced(width, height, K_sophus, doSlam);
 	monoOdometry->setVisualization(outputWrapper);
+	printf("Created LiveSLAMWrapperReinforced\n");
 }
 
 
@@ -36,40 +37,44 @@ LiveSLAMWrapperReinforced::~LiveSLAMWrapperReinforced()
 
 void LiveSLAMWrapperReinforced::Loop()
 {
-        while (true) {
-                boost::unique_lock<boost::recursive_mutex> waitLock(imageStream->getBuffer()->getMutex());
-                while (!fullResetRequested && !(imageStream->getBuffer()->size() > 0)) {
-                        notifyCondition.wait(waitLock);
-                }
-                waitLock.unlock();
+	printf("Entering LiveSLAMWrapperReinforced Loop\n");
+    while (true) 
+    {
+    	boost::unique_lock<boost::recursive_mutex> waitLock(imageStream->getBuffer()->getMutex());
+        while (!fullResetRequested && !(imageStream->getBuffer()->size() > 0) || !(imageStream->getDepth()->size() > 0)) 
+        {
+            notifyCondition.wait(waitLock);
+        }
+        waitLock.unlock();
 
 
-                if(fullResetRequested)
-                {
-                        resetAll();
-                        fullResetRequested = false;
-                        if (!(imageStream->getBuffer()->size() > 0))
-                                continue;
-                }
+        if(fullResetRequested)
+        {
+	        resetAll();
+	        fullResetRequested = false;
+	        if (!(imageStream->getBuffer()->size() > 0))
+	                continue;
+        }
 
-                TimestampedMat rgbImage = imageStream->getBuffer()->first();
-                imageStream->getBuffer()->popFront();
+        TimestampedMat rgbImage = imageStream->getBuffer()->first();
+        imageStream->getBuffer()->popFront();
 		TimestampedMat depthImage = imageStream->getDepth()->first();
 		imageStream->getDepth()->popFront();
 		
 		// Scaling the depth Image (DeepTAM needs it in meters)
-		depthImage.data.convertTo(depthImage.data, CV_32F, 0.0002);
+		//depthImage.data.convertTo(depthImage.data, CV_32FC1, 0.0002);
 
-                // process image
-                //Util::displayImage("MyVideo", image.data);
-                newImageCallback(rgbImage.data, rgbImage.timestamp, depthImage.data, depthImage.timestamp);
-        }
+        // process image
+        //Util::displayImage("MyVideo", image.data);
+        newImageCallback(rgbImage.data, rgbImage.timestamp, depthImage.data, depthImage.timestamp);
+    }
 }
 
 
-void LiveSLAMWrapperReinforced::newImageCallback(cv::Mat& rgbImg, Timestamp imgTime, cv::Mat&depthImg, Timestamp depthTime)
+void LiveSLAMWrapperReinforced::newImageCallback(cv::Mat& rgbImg, Timestamp imgTime, cv::Mat& depthImg, Timestamp depthTime)
 {
 	++ imageSeqNumber;
+	printf("imageSeqNumber: %d\n", imageSeqNumber);
 
 	cv::Mat grayImg;
 	cvtColor(rgbImg, grayImg, CV_RGB2GRAY);

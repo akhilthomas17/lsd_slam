@@ -24,6 +24,9 @@ ROSRGBDStreamThread::ROSRGBDStreamThread()
 ROSRGBDStreamThread::~ROSRGBDStreamThread()
 {
     delete depthBuffer;
+    delete rgb_sub;
+    delete depth_sub;
+    delete sync;
 }
 
 void ROSRGBDStreamThread::init()
@@ -31,19 +34,22 @@ void ROSRGBDStreamThread::init()
     vid_channel = nh_.resolveName("image");
     depth_channel = nh_.resolveName("depth");
 
-    rgb_sub.subscribe(nh_, vid_channel, 1);
-    depth_sub.subscribe(nh_, depth_channel, 1);
+    printf("depth_channel: %s\n", depth_channel.c_str());
+    printf("vid_channel: %s\n", vid_channel.c_str());
 
-    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> sync_pol;
-    message_filters::Synchronizer<sync_pol> sync(sync_pol(10), rgb_sub, depth_sub);
-    sync.registerCallback(&ROSRGBDStreamThread::rgbdCb, this);
+    rgb_sub = new message_filters::Subscriber<sensor_msgs::Image>(nh_, vid_channel, 10);
+    depth_sub = new message_filters::Subscriber<sensor_msgs::Image>(nh_, depth_channel, 10);
+
+    
+    sync = new message_filters::Synchronizer<sync_pol> (sync_pol(10), *rgb_sub, *depth_sub);
+    sync->registerCallback(boost::bind(&ROSRGBDStreamThread::rgbdCb, this, _1, _2));
 }
 
 void ROSRGBDStreamThread::rgbdCb(const sensor_msgs::ImageConstPtr& rgbMsg,const sensor_msgs::ImageConstPtr& depthMsg)
 {
     if(!haveCalib) return;
     cv_bridge::CvImagePtr rgb_ptr = cv_bridge::toCvCopy(rgbMsg, sensor_msgs::image_encodings::RGB8);
-    cv_bridge::CvImagePtr depth_ptr = cv_bridge::toCvCopy(depthMsg, sensor_msgs::image_encodings::MONO8);
+    cv_bridge::CvImagePtr depth_ptr = cv_bridge::toCvCopy(depthMsg, "");
 
     if(rgbMsg->header.seq < (unsigned int)lastSEQ)
     {

@@ -25,10 +25,12 @@ void init();
  * Callback when RGB images and Depth Images are received.
  */
 void rgbdCb(const sensor_msgs::ImageConstPtr &img, const sensor_msgs::ImageConstPtr &depth);
+typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> sync_pol;
 
 protected:
-message_filters::Subscriber<sensor_msgs::Image> rgb_sub;
-message_filters::Subscriber<sensor_msgs::Image> depth_sub;
+message_filters::Subscriber<sensor_msgs::Image>* rgb_sub;
+message_filters::Subscriber<sensor_msgs::Image>* depth_sub;
+message_filters::Synchronizer<sync_pol>* sync;
 std::string depth_channel;
 };
 

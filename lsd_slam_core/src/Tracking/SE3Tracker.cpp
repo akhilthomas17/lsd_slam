@@ -477,11 +477,11 @@ SE3 SE3Tracker::trackFrame(
 			&& lastGoodCount / (lastGoodCount + lastBadCount) > MIN_GOODPERGOODBAD_PIXEL;
 
 	if(trackingWasGood)
-		reference->keyframe->numFramesTrackedOnThis++;
+		//reference->keyframe->numFramesTrackedOnThis++;
 
 	frame->initialTrackedResidual = lastResidual / pointUsage;
-	frame->pose->thisToParent_raw = sim3FromSE3(toSophus(referenceToFrame.inverse()),1);
-	frame->pose->trackingParent = reference->keyframe->pose;
+	//frame->pose->thisToParent_raw = sim3FromSE3(toSophus(referenceToFrame.inverse()),1);
+	//frame->pose->trackingParent = reference->keyframe->pose;
 	return toSophus(referenceToFrame.inverse());
 }
 

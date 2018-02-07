@@ -10,15 +10,17 @@ namespace lsd_slam
 
 DeepTAMTracker::DeepTAMTracker(int w, int h, Eigen::Matrix3f K) : SE3Tracker(w, h, K)
 {
-    client = nh.serviceClient<reinforced_visual_slam::TrackImage>("track_image"); 
+    client = nh.serviceClient<reinforced_visual_slam::TrackImage>("track_image");
+    printf("Started DeepTAMTracker\n");
 }
 
 SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame, const SE3& frameToReference_initialEstimate)
 {
     reinforced_visual_slam::TrackImage srv;
     
+    //ROS_INFO("Type of Depth Image LSD SLAM: %d", reference->keyframe->depthMat()->type());
     srv.request.keyframe_image = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(reference->keyframe->rgbMat()) ).toImageMsg());
-    srv.request.keyframe_depth = *(cv_bridge::CvImage( std_msgs::Header(),"mono8",*(reference->keyframe->depthMat()) ).toImageMsg());
+    srv.request.keyframe_depth = *(cv_bridge::CvImage( std_msgs::Header(),"32FC1",*(reference->keyframe->depthMat()) ).toImageMsg());
     srv.request.current_image = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(frame->rgbMat()) ).toImageMsg());
     srv.request.intrinsics = {frame->fx(), frame->fy(), frame->cx(), frame->cy()};
 
@@ -35,7 +37,14 @@ SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame
         ROS_INFO("Response received");
         Sophus::Vector3d translation(srv.response.transform.translation.x, srv.response.transform.translation.y, srv.response.transform.translation.z);
         Sophus::Quaterniond orientation(srv.response.transform.rotation.x, srv.response.transform.rotation.y, srv.response.transform.rotation.z, srv.response.transform.rotation.w);
-        return SE3(toSophus(orientation), toSophus(translation));
+        SE3 frameToReference = SE3(toSophus(orientation), toSophus(translation));
+        
+        reference->keyframe->numFramesTrackedOnThis++;
+        frame->pose->thisToParent_raw = sim3FromSE3(frameToReference,1);
+        frame->pose->trackingParent = reference->keyframe->pose;
+
+
+        return frameToReference;
     }
     else
     {
