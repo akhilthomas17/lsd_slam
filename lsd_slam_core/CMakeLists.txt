@@ -8,7 +8,7 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 #  Release        : w/o debug symbols, w/ optimization
 #  RelWithDebInfo : w/ debug symbols, w/ optimization
 #  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-set(ROS_BUILD_TYPE Release)
+set(ROS_BUILD_TYPE Debug)
 
 rosbuild_init() 
 
@@ -19,6 +19,8 @@ set(CMAKE_MODULE_PATH   ${PROJECT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 find_package(Eigen3 REQUIRED)
 find_package(SuiteParse REQUIRED) # Apparently needed by g2o
 find_package(X11 REQUIRED)
+find_package(OpenCV REQUIRED)
+
 
 # FabMap
 # uncomment this part to enable fabmap
@@ -82,12 +84,13 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/thirdparty/Sophus
   ${CSPARSE_INCLUDE_DIR} #Has been set by SuiteParse
   ${CHOLMOD_INCLUDE_DIR} #Has been set by SuiteParse
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 
 # build shared library.
 rosbuild_add_library(lsdslam SHARED ${SOURCE_FILES})
-target_link_libraries(lsdslam ${FABMAP_LIB} g2o_core g2o_stuff csparse cxsparse g2o_solver_csparse g2o_csparse_extension g2o_types_sim3 g2o_types_sba X11)
+target_link_libraries(lsdslam ${FABMAP_LIB} ${OpenCV_LIBS} g2o_core g2o_stuff csparse cxsparse g2o_solver_csparse g2o_csparse_extension g2o_types_sim3 g2o_types_sba X11)
 rosbuild_link_boost(lsdslam thread)
 
 
@@ -100,6 +103,10 @@ target_link_libraries(live_slam lsdslam)
 rosbuild_add_executable(dataset_slam src/main_on_images.cpp)
 target_link_libraries(dataset_slam lsdslam)
 
-# build node to use with deepTAM
+# build node to use live images with deepTAM
 rosbuild_add_executable(deepTAM_live_slam src/main_live_odometry_reinforced.cpp)
 target_link_libraries(deepTAM_live_slam lsdslam)
+
+# build node to use images from disk with deepTAM
+rosbuild_add_executable(deepTAM_dataset_slam src/main_on_images_reinforced.cpp)
+target_link_libraries(deepTAM_dataset_slam lsdslam)

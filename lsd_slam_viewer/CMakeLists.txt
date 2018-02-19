@@ -78,5 +78,5 @@ target_link_libraries(viewer ${QGLViewer_LIBRARIES} ${QT_LIBRARIES} ${QGLVIEWER_
 rosbuild_link_boost(viewer thread)
 
 
-rosbuild_add_executable(videoStitch src/main_stitchVideos.cpp)
+#rosbuild_add_executable(videoStitch src/main_stitchVideos.cpp)
 

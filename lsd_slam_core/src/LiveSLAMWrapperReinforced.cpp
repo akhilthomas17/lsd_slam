@@ -37,7 +37,7 @@ LiveSLAMWrapperReinforced::~LiveSLAMWrapperReinforced()
 
 void LiveSLAMWrapperReinforced::Loop()
 {
-	printf("Entering LiveSLAMWrapperReinforced Loop\n");
+    printf("Entering LiveSLAMWrapperReinforced Loop\n");
     while (true) 
     {
     	boost::unique_lock<boost::recursive_mutex> waitLock(imageStream->getBuffer()->getMutex());

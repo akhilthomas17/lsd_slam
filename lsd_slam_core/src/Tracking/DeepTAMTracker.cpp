@@ -16,9 +16,12 @@ DeepTAMTracker::DeepTAMTracker(int w, int h, Eigen::Matrix3f K) : SE3Tracker(w, 
 
 SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame, const SE3& frameToReference_initialEstimate)
 {
-    reinforced_visual_slam::TrackImage srv;
-    
-    //ROS_INFO("Type of Depth Image LSD SLAM: %d", reference->keyframe->depthMat()->type());
+    boost::shared_lock<boost::shared_mutex> lock = frame->getActiveLock();
+    printf("Tracking current frame \n");
+    reinforced_visual_slam::TrackImage srv;   
+    ROS_INFO("Type of Depth Image LSD SLAM: %d", reference->keyframe->depthMat()->type());
+    ROS_INFO("Type of RGB Image LSD SLAM: %d", reference->keyframe->rgbMat()->type());
+    ROS_INFO("Type of RGB current Image LSD SLAM: %d", frame->rgbMat()->type());
     srv.request.keyframe_image = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(reference->keyframe->rgbMat()) ).toImageMsg());
     srv.request.keyframe_depth = *(cv_bridge::CvImage( std_msgs::Header(),"32FC1",*(reference->keyframe->depthMat()) ).toImageMsg());
     srv.request.current_image = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(frame->rgbMat()) ).toImageMsg());
@@ -32,25 +35,30 @@ SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame
     srv.request.translation_prior[1] = frameToReference_initialEstimate.translation().cast<float>()[1];
     srv.request.translation_prior[2] = frameToReference_initialEstimate.translation().cast<float>()[2];
 
+    printf("Calling DeepTAM client\n");
+    SE3 frameToReference;
+
     if (client.call(srv))
     {
         ROS_INFO("Response received");
         Sophus::Vector3d translation(srv.response.transform.translation.x, srv.response.transform.translation.y, srv.response.transform.translation.z);
-        Sophus::Quaterniond orientation(srv.response.transform.rotation.x, srv.response.transform.rotation.y, srv.response.transform.rotation.z, srv.response.transform.rotation.w);
-        SE3 frameToReference = SE3(toSophus(orientation), toSophus(translation));
+        Sophus::Quaterniond orientation;
+        orientation.x() = srv.response.transform.rotation.x;
+        orientation.y() = srv.response.transform.rotation.y;
+        orientation.z() = srv.response.transform.rotation.z;
+        orientation.w() = srv.response.transform.rotation.w;
+        frameToReference = SE3(toSophus(orientation), toSophus(translation));
         
         reference->keyframe->numFramesTrackedOnThis++;
         frame->pose->thisToParent_raw = sim3FromSE3(frameToReference,1);
         frame->pose->trackingParent = reference->keyframe->pose;
-
-
-        return frameToReference;
     }
     else
     {
         ROS_INFO("No response!!");
-        return SE3();
     }
+
+    return frameToReference;
 }
 
 }
