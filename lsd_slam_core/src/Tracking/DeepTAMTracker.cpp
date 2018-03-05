@@ -11,10 +11,24 @@ namespace lsd_slam
 DeepTAMTracker::DeepTAMTracker(int w, int h, Eigen::Matrix3f K) : SE3Tracker(w, h, K)
 {
     client = nh.serviceClient<reinforced_visual_slam::TrackImage>("track_image");
+    status = nh.serviceClient<reinforced_visual_slam::TrackerStatus>("tracker_status");
+    //sub = nh.subscribe("tracker_status", 1, &DeepTAMTracker::statusCallback, this);
     printf("Started DeepTAMTracker\n");
+    //trackerStatus = false;
 }
 
-SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame, const SE3& frameToReference_initialEstimate)
+
+bool DeepTAMTracker::shakeHands()
+{
+    reinforced_visual_slam::TrackerStatus srv;
+    if (!client.call(srv))
+        return false;
+    else
+        return srv.response.status.data;
+
+}
+
+SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame, const SE3& referenceToFrame_initialEstimate)
 {
     boost::shared_lock<boost::shared_mutex> lock = frame->getActiveLock();
     printf("Tracking current frame \n");
@@ -27,13 +41,13 @@ SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame
     srv.request.current_image = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(frame->rgbMat()) ).toImageMsg());
     srv.request.intrinsics = {frame->fx(), frame->fy(), frame->cx(), frame->cy()};
 
-    srv.request.rotation_prior[0] = frameToReference_initialEstimate.so3().log().cast<float>()[0];
-    srv.request.rotation_prior[1] = frameToReference_initialEstimate.so3().log().cast<float>()[1];
-    srv.request.rotation_prior[2] = frameToReference_initialEstimate.so3().log().cast<float>()[2];
+    srv.request.rotation_prior[0] = referenceToFrame_initialEstimate.so3().log().cast<float>()[0];
+    srv.request.rotation_prior[1] = referenceToFrame_initialEstimate.so3().log().cast<float>()[1];
+    srv.request.rotation_prior[2] = referenceToFrame_initialEstimate.so3().log().cast<float>()[2];
 
-    srv.request.translation_prior[0] = frameToReference_initialEstimate.translation().cast<float>()[0];
-    srv.request.translation_prior[1] = frameToReference_initialEstimate.translation().cast<float>()[1];
-    srv.request.translation_prior[2] = frameToReference_initialEstimate.translation().cast<float>()[2];
+    srv.request.translation_prior[0] = referenceToFrame_initialEstimate.translation().cast<float>()[0];
+    srv.request.translation_prior[1] = referenceToFrame_initialEstimate.translation().cast<float>()[1];
+    srv.request.translation_prior[2] = referenceToFrame_initialEstimate.translation().cast<float>()[2];
 
     printf("Calling DeepTAM client\n");
     SE3 frameToReference;
@@ -52,6 +66,7 @@ SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame
         reference->keyframe->numFramesTrackedOnThis++;
         frame->pose->thisToParent_raw = sim3FromSE3(frameToReference,1);
         frame->pose->trackingParent = reference->keyframe->pose;
+        //bool* refpixelgood = frame->refPixelWasGood();
     }
     else
     {

@@ -313,7 +313,7 @@ int main( int argc, char** argv )
             std::cout << "Press ENTER to continue...";
             std::cin.ignore( std::numeric_limits<std::streamsize>::max(), '\n' );
         } else
-        	system->trackFrame(&image, &depthImg, runningIDX, hz == 0, fakeTimeStamp);
+        	system->trackFrameTest(&image, &depthImg, runningIDX, hz == 0, fakeTimeStamp);
 		runningIDX++;
 
 		if(hz != 0)

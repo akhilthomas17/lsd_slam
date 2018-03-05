@@ -18,11 +18,14 @@ SlamSystemReinforced(int w, int h, Eigen::Matrix3f K, bool enableSLAM = true);
 
 void trackFrame(cv::Mat* rgb, cv::Mat* depth, unsigned int frameID, bool blockUntilMapped, double timestamp);
 
+void trackFrameTest(cv::Mat* rgb, cv::Mat* depth, unsigned int frameID, bool blockUntilMapped, double timestamp);
+
 void gtDepthInit(cv::Mat* rgb, cv::Mat* depth, double timeStamp, int id);
 
 private:
 
 	DeepTAMTracker* tracker;
+	SE3 _frameToReference_initialEstimate;
 
 };
 

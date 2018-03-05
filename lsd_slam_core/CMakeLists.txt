@@ -8,7 +8,7 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 #  Release        : w/o debug symbols, w/ optimization
 #  RelWithDebInfo : w/ debug symbols, w/ optimization
 #  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-set(ROS_BUILD_TYPE Debug)
+set(ROS_BUILD_TYPE Release)
 
 rosbuild_init() 
 
@@ -87,6 +87,9 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
 )
 
+MESSAGE("OpenCV_INCLUDE_DIRS:" ${OpenCV_INCLUDE_DIRS})
+MESSAGE("OpenCV_LIBS:" ${OpenCV_LIBS})
+
 
 # build shared library.
 rosbuild_add_library(lsdslam SHARED ${SOURCE_FILES})
@@ -110,3 +113,7 @@ target_link_libraries(deepTAM_live_slam lsdslam)
 # build node to use images from disk with deepTAM
 rosbuild_add_executable(deepTAM_dataset_slam src/main_on_images_reinforced.cpp)
 target_link_libraries(deepTAM_dataset_slam lsdslam)
+
+# build node to use images from disk with deepTAM
+rosbuild_add_executable(deepTAM_test_dataset_slam src/main_on_images_test.cpp)
+target_link_libraries(deepTAM_test_dataset_slam lsdslam)
