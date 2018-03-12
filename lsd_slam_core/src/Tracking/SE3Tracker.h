@@ -91,7 +91,7 @@ public:
 
 	bool diverged;
 	bool trackingWasGood;
-private:
+protected:
 
 
 

@@ -139,9 +139,9 @@ void SlamSystemReinforced::trackFrame(cv::Mat* rgb, cv::Mat* depth, unsigned int
 	//printf("Trial Last pose\n");
 	//dummySim3 = keyFrameGraph->allFramePoses.back()->getCamToWorld();
 
-	/** Uncomment to activate the old approach for initial estimate
+	//** Uncomment to activate the old approach for initial estimate
 	poseConsistencyMutex.lock_shared();
-	SE3 _frameToReference_initialEstimate = se3FromSim3(
+	_frameToReference_initialEstimate = se3FromSim3(
 			trackingReferencePose->getCamToWorld().inverse() * keyFrameGraph->allFramePoses.back()->getCamToWorld());
 	poseConsistencyMutex.unlock_shared();
 	//*/
@@ -166,10 +166,11 @@ void SlamSystemReinforced::trackFrame(cv::Mat* rgb, cv::Mat* depth, unsigned int
 			trackingReference,
 			trackingNewFrame.get(),
 			_frameToReference_initialEstimate.inverse());
+
 	
 	//printf("Response from DeepTAM tracker\n");
 	
-	_frameToReference_initialEstimate = newRefToFrame_poseUpdate;
+	//_frameToReference_initialEstimate = newRefToFrame_poseUpdate;
 	//*/
 
 	/**
@@ -309,9 +310,9 @@ void SlamSystemReinforced::trackFrameTest(cv::Mat* rgb, cv::Mat* depth, unsigned
 	//printf("Trial Last pose\n");
 	//dummySim3 = keyFrameGraph->allFramePoses.back()->getCamToWorld();
 
-	/** Uncomment to activate the old approach for initial estimate
+	//** Uncomment to activate the old approach for initial estimate
 	poseConsistencyMutex.lock_shared();
-	SE3 _frameToReference_initialEstimate = se3FromSim3(
+	_frameToReference_initialEstimate = se3FromSim3(
 			trackingReferencePose->getCamToWorld().inverse() * keyFrameGraph->allFramePoses.back()->getCamToWorld());
 	poseConsistencyMutex.unlock_shared();
 	//*/
@@ -339,7 +340,7 @@ void SlamSystemReinforced::trackFrameTest(cv::Mat* rgb, cv::Mat* depth, unsigned
 	
 	//printf("Response from DeepTAM tracker\n");
 	
-	_frameToReference_initialEstimate = newRefToFrame_poseUpdate;
+	//_frameToReference_initialEstimate = newRefToFrame_poseUpdate;
 	//*/
 
 	/**
