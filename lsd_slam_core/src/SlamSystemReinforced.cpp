@@ -134,18 +134,16 @@ void SlamSystemReinforced::trackFrame(cv::Mat* rgb, cv::Mat* depth, unsigned int
 	if(enablePrintDebugInfo && printThreadingInfo)
 		printf("TRACKING %d on %d\n", trackingNewFrame->id(), trackingReferencePose->frameID);
 
-	//printf("Trial KF pose\n");
-	//Sim3 dummySim3 = trackingReferencePose->getCamToWorld().inverse();
-	//printf("Trial Last pose\n");
-	//dummySim3 = keyFrameGraph->allFramePoses.back()->getCamToWorld();
-
-	//** Uncomment to activate the old approach for initial estimate
+	/** Uncomment to activate the old approach for initial estimate
 	poseConsistencyMutex.lock_shared();
 	_frameToReference_initialEstimate = se3FromSim3(
 			trackingReferencePose->getCamToWorld().inverse() * keyFrameGraph->allFramePoses.back()->getCamToWorld());
 	poseConsistencyMutex.unlock_shared();
 	//*/
 
+        poseConsistencyMutex.lock_shared();
+        Sim3 frameToReference_initialEstimate = trackingReferencePose->getCamToWorld().inverse() * keyFrameGraph->allFramePoses.back()->getCamToWorld());
+        poseConsistencyMutex.unlock_shared();
 
 	struct timeval tv_start, tv_end;
 	gettimeofday(&tv_start, NULL);
@@ -165,7 +163,7 @@ void SlamSystemReinforced::trackFrame(cv::Mat* rgb, cv::Mat* depth, unsigned int
 	SE3 newRefToFrame_poseUpdate = tracker->trackFrameDeepTAM(
 			trackingReference,
 			trackingNewFrame.get(),
-			_frameToReference_initialEstimate.inverse());
+			frameToReference_initialEstimate.inverse(), true);
 
 	
 	//printf("Response from DeepTAM tracker\n");
@@ -278,18 +276,6 @@ void SlamSystemReinforced::trackFrameTest(cv::Mat* rgb, cv::Mat* depth, unsigned
 	std::shared_ptr<Frame> trackingNewFrame(new Frame(frameID, width, height, K, timestamp, grayImg.data));
 	trackingNewFrame->setCVImages(rgb->clone(), depth->clone());
 
-	/** Relocalization
-	if(!trackingIsGood)
-	{
-		relocalizer.updateCurrentFrame(trackingNewFrame);
-
-		unmappedTrackedFramesMutex.lock();
-		unmappedTrackedFramesSignal.notify_one();
-		unmappedTrackedFramesMutex.unlock();
-		return;
-	}
-	*/
-
 	currentKeyFrameMutex.lock();
 	if(trackingReference->keyframe != currentKeyFrame.get() || currentKeyFrame->depthHasBeenUpdatedFlag)
 	{
@@ -305,59 +291,28 @@ void SlamSystemReinforced::trackFrameTest(cv::Mat* rgb, cv::Mat* depth, unsigned
 	if(enablePrintDebugInfo && printThreadingInfo)
 		printf("TRACKING %d on %d\n", trackingNewFrame->id(), trackingReferencePose->frameID);
 
-	//printf("Trial KF pose\n");
-	//Sim3 dummySim3 = trackingReferencePose->getCamToWorld().inverse();
-	//printf("Trial Last pose\n");
-	//dummySim3 = keyFrameGraph->allFramePoses.back()->getCamToWorld();
-
-	//** Uncomment to activate the old approach for initial estimate
+        /** Uncomment to have old initial estimate calculation
 	poseConsistencyMutex.lock_shared();
 	_frameToReference_initialEstimate = se3FromSim3(
 			trackingReferencePose->getCamToWorld().inverse() * keyFrameGraph->allFramePoses.back()->getCamToWorld());
 	poseConsistencyMutex.unlock_shared();
-	//*/
+        //*/
+
+        poseConsistencyMutex.lock_shared();
+        Sim3 frameToReference_initialEstimate = trackingReferencePose->getCamToWorld().inverse() * keyFrameGraph->allFramePoses.back()->getCamToWorld());
+        poseConsistencyMutex.unlock_shared();
 
 
 	struct timeval tv_start, tv_end;
 	gettimeofday(&tv_start, NULL);
 
-	/** Just for testing purposes so that the system won't break in the beginning */
-	//**
-	SE3 dummy_poseUpdate = tracker->trackFrame(
-			trackingReference,
-			trackingNewFrame.get(),
-			_frameToReference_initialEstimate);
-	//*/
 
-
-        //for(int i=0; i<10; i++)
 	/** Using DeepTAM for tracking. The pose update is now independent of LSD SLAM */
-	//*
 	SE3 newRefToFrame_poseUpdate = tracker->trackFrameDeepTAM(
 			trackingReference,
 			trackingNewFrame.get(),
-			_frameToReference_initialEstimate.inverse());
-	
-	//printf("Response from DeepTAM tracker\n");
-	
-	//_frameToReference_initialEstimate = newRefToFrame_poseUpdate;
-	//*/
+			frameToReference_initialEstimate.inverse(), false);
 
-	/**
-
-	Sophus::Quaternionf quat = dummy_poseUpdate.unit_quaternion().cast<float>();
-        Eigen::Vector3f trans = dummy_poseUpdate.translation().cast<float>();
-
-        printf("SE3Tracker: %f %f %f %f %f %f %f\n",
-                        trans[0],
-                        trans[1],
-                        trans[2],
-                        quat.x(),
-                        quat.y(),
-                        quat.z(),
-                        quat.w());
-
-    */
 
 	gettimeofday(&tv_end, NULL);
 	msTrackFrame = 0.9*msTrackFrame + 0.1*((tv_end.tv_sec-tv_start.tv_sec)*1000.0f + (tv_end.tv_usec-tv_start.tv_usec)/1000.0f);
@@ -394,7 +349,6 @@ void SlamSystemReinforced::trackFrameTest(cv::Mat* rgb, cv::Mat* depth, unsigned
 
 	/** KeyFrame selection
 	Criterion: maxmimum distance and maximum angle */
-
 	double maxDist = 0.15;
 	double maxAngle = 5;
 

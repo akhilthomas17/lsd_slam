@@ -114,6 +114,6 @@ target_link_libraries(deepTAM_live_slam lsdslam)
 rosbuild_add_executable(deepTAM_dataset_slam src/main_on_images_reinforced.cpp)
 target_link_libraries(deepTAM_dataset_slam lsdslam)
 
-# build node to use images from disk with deepTAM
+# build node to use images from disk with deepTAM in test mode
 rosbuild_add_executable(deepTAM_test_dataset_slam src/main_on_images_test.cpp)
 target_link_libraries(deepTAM_test_dataset_slam lsdslam)

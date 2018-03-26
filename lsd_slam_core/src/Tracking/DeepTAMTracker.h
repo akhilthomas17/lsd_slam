@@ -22,7 +22,7 @@ class DeepTAMTracker: public SE3Tracker
 {
 public:
     DeepTAMTracker(int w, int h, Eigen::Matrix3f K);
-    SE3 trackFrameDeepTAM(TrackingReference* reference, Frame* frame, const SE3& referenceToFrame_initialEstimate);
+    SE3 trackFrameDeepTAM(TrackingReference* reference, Frame* frame, const Sim3& referenceToFrame_initialEstimate, bool optimize);
     bool shakeHands();
 
 
