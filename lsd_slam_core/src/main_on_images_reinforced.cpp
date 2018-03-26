@@ -181,6 +181,60 @@ int getFileRgbdTUM (std::string rgb_path, std::vector<std::string> &rgb_files, s
     return (int) rgb_files.size();
 }
 
+int getComboFileRgbdTUM (std::string source, std::vector<std::string> &rgb_files, std::vector<std::string> &depth_files, std::vector<double> &timestamps)
+{
+    std::vector < std::vector<std::string>* > files;
+    files.push_back(&rgb_files);
+    files.push_back(&depth_files);
+
+    std::ifstream f(source.c_str());
+
+    if (f.good() && f.is_open()) {
+        while (!f.eof()) {
+            std::string l;
+
+            std::getline(f, l);
+
+            //l = trim(l);
+
+            if (l == "" || l[0] == '#')
+                continue;
+
+            // Split the string to separate timestamps and rgb image file name
+            std::istringstream iss(l);
+            std::vector<std::string> tokens{std::istream_iterator<std::string>{iss},
+                                            std::istream_iterator<std::string>{}};
+            timestamps.push_back(std::atof(tokens[0].c_str()));
+            files[0]->push_back(tokens[1]);
+            files[1]->push_back(tokens[3]);
+        }
+
+        f.close();
+
+        size_t sp = source.find_last_of('/');
+        std::string prefix;
+        if (sp == std::string::npos)
+            prefix = "";
+        else
+            prefix = source.substr(0, sp);
+
+        for (int ii = 0; ii < 2; ii++)
+        {
+	        for (unsigned int i = 0; i < files[ii]->size(); i++) {
+	            if (files[ii]->at(i)[0] != '/')
+	                files[ii]->at(i) = prefix + "/" + files[ii]->at(i);
+	        }
+	    }
+
+    } else {
+        f.close();
+        return -1;
+    }
+    std::cout << "Depth images: " << depth_files.size() << std::endl;
+    std::cout << "RGB images: " << rgb_files.size() << std::endl;
+    return (int) rgb_files.size();
+}
+
 using namespace lsd_slam;
 
 
@@ -257,7 +311,13 @@ int main( int argc, char** argv )
 	{
 		printf("found %d image rgb_files in folder %s!\n", (int)rgb_files.size(), source.c_str());
 	}
-	else */if(getFileRgbdTUM(source, rgb_files, depth_files, timestamps) >= 0)
+	else 
+	*/
+	if(getComboFileRgbdTUM(source, rgb_files, depth_files, timestamps) >= 0)
+	{
+		printf("found %d rgb and depth files from file %s!\n", (int)rgb_files.size(), source.c_str());
+	}
+	else if(getFileRgbdTUM(source, rgb_files, depth_files, timestamps) >= 0)
 	{
 		printf("found %d image rgb_files in file %s!\n", (int)rgb_files.size(), source.c_str());
 	}
