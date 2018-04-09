@@ -142,7 +142,7 @@ void SlamSystemReinforced::trackFrame(cv::Mat* rgb, cv::Mat* depth, unsigned int
 	//*/
 
         poseConsistencyMutex.lock_shared();
-        Sim3 frameToReference_initialEstimate = trackingReferencePose->getCamToWorld().inverse() * keyFrameGraph->allFramePoses.back()->getCamToWorld());
+        Sim3 frameToReference_initialEstimate = trackingReferencePose->getCamToWorld().inverse() * keyFrameGraph->allFramePoses.back()->getCamToWorld();
         poseConsistencyMutex.unlock_shared();
 
 	struct timeval tv_start, tv_end;
@@ -299,7 +299,7 @@ void SlamSystemReinforced::trackFrameTest(cv::Mat* rgb, cv::Mat* depth, unsigned
         //*/
 
         poseConsistencyMutex.lock_shared();
-        Sim3 frameToReference_initialEstimate = trackingReferencePose->getCamToWorld().inverse() * keyFrameGraph->allFramePoses.back()->getCamToWorld());
+        Sim3 frameToReference_initialEstimate = trackingReferencePose->getCamToWorld().inverse() * keyFrameGraph->allFramePoses.back()->getCamToWorld();
         poseConsistencyMutex.unlock_shared();
 
 

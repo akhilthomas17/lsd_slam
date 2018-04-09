@@ -4,7 +4,6 @@
 *
 */
 #include "Tracking/DeepTAMTracker.h"
-
 namespace lsd_slam
 {
 
@@ -45,17 +44,17 @@ SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame
     boost::shared_lock<boost::shared_mutex> lock = frame->getActiveLock();
     printf("Tracking current frame \n");
     reinforced_visual_slam::TrackImage srv;
-    float current_scale = referenceToFrame_initialEstimate_sim3.scale();
+    float current_scale = reference->keyframe->pose->getCamToWorld().scale();
     if (debug){
         ROS_INFO("Type of Depth Image LSD SLAM: %d", reference->keyframe->depthMat()->type());
         ROS_INFO("Type of RGB Image LSD SLAM: %d", reference->keyframe->rgbMat()->type());
         ROS_INFO("Type of RGB current Image LSD SLAM: %d", frame->rgbMat()->type());
-        ROS_INFO("Scale of initial estimate guess: %f", current_scale();
+        ROS_INFO("Scale of initial estimate guess: %f", current_scale);
     }
-    /** Inverting the scale of initial guess passed to deepTAM. DeepTAM always expect at scale = 1 (m) */
+    /** Converting the scale of initial guess passed to deepTAM. DeepTAM always expect at scale in m */
     Sim3 scaleInverter;
     scaleInverter.setScale(current_scale);
-    SE3 referenceToFrame_initialEstimate = se3fromSim3(scaleInverter * referenceToFrame_initialEstimate_sim3);
+    SE3 referenceToFrame_initialEstimate = se3FromSim3(scaleInverter * referenceToFrame_initialEstimate_sim3);
 
     srv.request.keyframe_image = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(reference->keyframe->rgbMat()) ).toImageMsg());
     srv.request.keyframe_depth = *(cv_bridge::CvImage( std_msgs::Header(),"32FC1",*(reference->keyframe->depthMat()) ).toImageMsg());
@@ -87,7 +86,7 @@ SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame
         Sim3 frameToReference_unscaled = Sim3(toSophus(orientation), toSophus(translation));
         scaleInverter = Sim3();
         scaleInverter.setScale(1/current_scale);
-        frameToReference = se3fromSim3(scaleInverter * frameToReference_unscaled);
+        frameToReference = se3FromSim3(scaleInverter * frameToReference_unscaled);
 
         if (optimize)
         {
@@ -101,7 +100,6 @@ SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame
             int lvl = SE3TRACKING_MIN_LEVEL;
             Sophus::SE3f referenceToFrame = frameToReference.inverse().cast<float>();
             reference->makePointCloud(lvl);
-            callOptimized(calcResidualAndBuffers, (reference->posData[lvl], reference->colorAndVarData[lvl], SE3TRACKING_MIN_LEVEL == lvl ? reference->pointPosInXYGrid[lvl] : 0, reference->numData[lvl], frame, referenceToFrame, lvl, (plotTracking && lvl == SE3TRACKING_MIN_LEVEL)));
             callOptimized(calcResidualAndBuffers, (reference->posData[lvl], reference->colorAndVarData[lvl], SE3TRACKING_MIN_LEVEL == lvl ? reference->pointPosInXYGrid[lvl] : 0, reference->numData[lvl], frame, referenceToFrame, lvl, (plotTracking && lvl == SE3TRACKING_MIN_LEVEL)));
 
             if(useAffineLightningEstimation)
