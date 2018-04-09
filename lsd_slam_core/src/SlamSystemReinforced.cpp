@@ -8,7 +8,7 @@
 
 #include "DataStructures/Frame.h"
 #include "Tracking/Sim3Tracker.h"
-#include "DepthEstimation/DepthMap.h"
+#include "DepthEstimation/DepthMapPredictor.h"
 #include "Tracking/TrackingReference.h"
 #include "LiveSLAMWrapper.h"
 #include "util/globalFuncs.h"
@@ -39,6 +39,7 @@ using namespace lsd_slam;
 
 SlamSystemReinforced::SlamSystemReinforced(int w, int h, Eigen::Matrix3f K, bool enableSLAM): SlamSystem(w, h, K, enableSLAM)
 {
+    map =  new DepthMapPredictor(w,h,K);
     tracker = new DeepTAMTracker(w,h,K);
     // Do not use more than 4 levels for odometry tracking
     for (int level = 4; level < PYRAMID_LEVELS; ++level)

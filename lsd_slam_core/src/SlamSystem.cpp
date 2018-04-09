@@ -68,8 +68,6 @@ SlamSystem::SlamSystem(int w, int h, Eigen::Matrix3f K, bool enableSLAM)
 	trackingReferenceFrameSharedPT = nullptr;
 	keyFrameGraph = new KeyFrameGraph();
 	createNewKeyFrame = false;
-
-	map =  new DepthMap(w,h,K);
 	
 	newConstraintAdded = false;
 	haveUnmergedOptimizationOffset = false;
@@ -168,6 +166,7 @@ SlamSystem::~SlamSystem()
 
 void SlamSystem::init(int w, int h, Eigen::Matrix3f K)
 {
+        map =  new DepthMap(w,h,K);
 	tracker = new SE3Tracker(w,h,K);
 	// Do not use more than 4 levels for odometry tracking
 	for (int level = 4; level < PYRAMID_LEVELS; ++level)

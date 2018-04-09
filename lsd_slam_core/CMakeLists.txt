@@ -54,6 +54,7 @@ set(lsd_SOURCE_FILES
   ${PROJECT_SOURCE_DIR}/src/LiveSLAMWrapper.cpp
   ${PROJECT_SOURCE_DIR}/src/LiveSLAMWrapperReinforced.cpp
   ${PROJECT_SOURCE_DIR}/src/DepthEstimation/DepthMap.cpp
+  ${PROJECT_SOURCE_DIR}/src/DepthEstimation/DepthMapPredictor.cpp
   ${PROJECT_SOURCE_DIR}/src/DepthEstimation/DepthMapPixelHypothesis.cpp
   ${PROJECT_SOURCE_DIR}/src/util/globalFuncs.cpp
   ${PROJECT_SOURCE_DIR}/src/util/SophusUtil.cpp
