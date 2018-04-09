@@ -98,17 +98,18 @@ SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame
             /** Finding the residuals and updating depth buffers for the found frameToReference */
             //* Uncomment to make DeepTAM tracker work well standalone
             int lvl = SE3TRACKING_MIN_LEVEL;
+	    affineEstimation_a = 1; affineEstimation_b = 0;
             Sophus::SE3f referenceToFrame = frameToReference.inverse().cast<float>();
             reference->makePointCloud(lvl);
             callOptimized(calcResidualAndBuffers, (reference->posData[lvl], reference->colorAndVarData[lvl], SE3TRACKING_MIN_LEVEL == lvl ? reference->pointPosInXYGrid[lvl] : 0, reference->numData[lvl], frame, referenceToFrame, lvl, (plotTracking && lvl == SE3TRACKING_MIN_LEVEL)));
-
             if(useAffineLightningEstimation)
             {
                 affineEstimation_a = affineEstimation_a_lastIt;
                 affineEstimation_b = affineEstimation_b_lastIt;
             }
+	    callOptimized(calcResidualAndBuffers, (reference->posData[lvl], reference->colorAndVarData[lvl], SE3TRACKING_MIN_LEVEL == lvl ? reference->pointPosInXYGrid[lvl] : 0, reference->numData[lvl], frame, referenceToFrame, lvl, (plotTracking && lvl == SE3TRACKING_MIN_LEVEL)));
             lastResidual = callOptimized(calcWeightsAndResidual,(referenceToFrame));
-
+	    ROS_INFO("lastResidual: %f", lastResidual);
             frame->initialTrackedResidual = lastResidual / pointUsage;
             reference->keyframe->numFramesTrackedOnThis++;
             frame->pose->thisToParent_raw = sim3FromSE3(frameToReference,1);
