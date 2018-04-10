@@ -35,6 +35,7 @@
 
 #include "util/Undistorter.h"
 #include <ros/package.h>
+#include <ros/console.h>
 
 #include "opencv2/opencv.hpp"
 
@@ -332,6 +333,9 @@ int main( int argc, char** argv )
 		hz = 0;
 	ros::param::del("~hz");
 
+        // check program mode selectors
+	ROS_WARN("predictDepth_mode: %d", predictDepth);
+	ROS_WARN("doSLAM_mode: %d", doSlam);
 
 	cv::Mat image = cv::Mat(h,w,CV_8U);
 	int runningIDX=0;

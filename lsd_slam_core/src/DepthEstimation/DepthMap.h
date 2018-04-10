@@ -97,7 +97,7 @@ public:
 	// pointer to global keyframe graph
 	IndexThreadReduce threadReducer;
 
-private:
+protected:
 	// camera matrix etc.
 	Eigen::Matrix3f K, KInv;
 	float fx,fy,cx,cy;

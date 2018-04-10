@@ -256,6 +256,10 @@ extern std::string packagePath;
 
 extern bool fullResetRequested;
 extern bool manualTrackingLossIndicated;
+
+//** Added by Akhil **//
+ extern bool predictDepth;
+
 class RunningStats
 {
 public:

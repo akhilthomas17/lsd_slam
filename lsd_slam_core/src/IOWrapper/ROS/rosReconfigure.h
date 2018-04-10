@@ -99,6 +99,9 @@ void dynConfCb(lsd_slam_core::LSDParamsConfig &config, uint32_t level)
 	maxLoopClosureCandidates = config.maxLoopClosureCandidates;
 	loopclosureStrictness = config.loopclosureStrictness;
 	relocalizationTH = config.relocalizationTH;
+	
+	//** Added by Akhil **//
+	predictDepth = config.predictDepth;
 }
 
 }

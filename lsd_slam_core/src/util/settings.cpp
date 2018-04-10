@@ -116,7 +116,9 @@ bool manualTrackingLossIndicated = false;
 
 std::string packagePath = "";
 
-
+  //** Added by Akhil **//
+  bool predictDepth = false;
+  
 void handleKey(char k)
 {
 	char kkk = k;

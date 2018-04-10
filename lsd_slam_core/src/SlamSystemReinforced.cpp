@@ -388,3 +388,35 @@ void SlamSystemReinforced::trackFrameTest(cv::Mat* rgb, cv::Mat* depth, unsigned
 		lock.unlock();
 	}
 }
+
+void SlamSystemReinforced::createNewCurrentKeyframe(std::shared_ptr<Frame> newKeyframeCandidate)
+{
+ if(enablePrintDebugInfo && printThreadingInfo)
+	printf("CREATE NEW KF %d from %d\n", newKeyframeCandidate->id(), currentKeyFrame->id());
+
+
+ if(SLAMEnabled)
+ {
+   // add NEW keyframe to id-lookup
+   keyFrameGraph->idToKeyFrameMutex.lock();
+   keyFrameGraph->idToKeyFrame.insert(std::make_pair(newKeyframeCandidate->id(), newKeyframeCandidate));
+   keyFrameGraph->idToKeyFrameMutex.unlock();
+ }
+
+ // propagate & make new using the new createKeyframeManager
+ map->createKeyframeManager(newKeyframeCandidate.get());
+
+ if(printPropagationStatistics)
+ {
+  Eigen::Matrix<float, 20, 1> data;
+  data.setZero();
+  data[0] = runningStats.num_prop_attempts / ((float)width*height);
+  data[1] = (runningStats.num_prop_created + runningStats.num_prop_merged) / (float)runningStats.num_prop_attempts;
+  data[2] = runningStats.num_prop_removed_colorDiff / (float)runningStats.num_prop_attempts;
+  outputWrapper->publishDebugInfo(data);
+ }
+
+ currentKeyFrameMutex.lock();
+ currentKeyFrame = newKeyframeCandidate;
+ currentKeyFrameMutex.unlock();
+}
