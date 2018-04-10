@@ -163,7 +163,7 @@ void SlamSystemReinforced::trackFrame(cv::Mat* rgb, cv::Mat* depth, unsigned int
 	SE3 newRefToFrame_poseUpdate = tracker->trackFrameDeepTAM(
 			trackingReference,
 			trackingNewFrame.get(),
-			frameToReference_initialEstimate.inverse(), true);
+			frameToReference_initialEstimate.inverse(), false);
 
 	
 	//printf("Response from DeepTAM tracker\n");
