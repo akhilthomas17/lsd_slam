@@ -8,7 +8,6 @@ namespace lsd_slam
 {
 
 class DeepTAMTracker;
- class DepthMapPredictor;
 
 class SlamSystemReinforced : public SlamSystem
 {
@@ -23,13 +22,10 @@ void trackFrameTest(cv::Mat* rgb, cv::Mat* depth, unsigned int frameID, bool blo
 
 void gtDepthInit(cv::Mat* rgb, cv::Mat* depth, double timeStamp, int id);
 
- void createNewCurrentKeyframe(std::shared_ptr<Frame> newKeyframeCandidate);
-
 private:
 
 	DeepTAMTracker* tracker;
 	SE3 _frameToReference_initialEstimate;
-	DepthMapPredictor* map;
 
 };
 

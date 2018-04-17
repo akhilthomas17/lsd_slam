@@ -166,7 +166,7 @@ SlamSystem::~SlamSystem()
 
 void SlamSystem::init(int w, int h, Eigen::Matrix3f K)
 {
-        map =  new DepthMap(w,h,K);
+    map =  new DepthMap(w,h,K);
 	tracker = new SE3Tracker(w,h,K);
 	// Do not use more than 4 levels for odometry tracking
 	for (int level = 4; level < PYRAMID_LEVELS; ++level)
@@ -475,6 +475,7 @@ void SlamSystem::createNewCurrentKeyframe(std::shared_ptr<Frame> newKeyframeCand
 		keyFrameGraph->idToKeyFrameMutex.unlock();
 	}
 
+	printf("Creating new keyframe\n");
 	// propagate & make new.
 	map->createKeyFrame(newKeyframeCandidate.get());
 

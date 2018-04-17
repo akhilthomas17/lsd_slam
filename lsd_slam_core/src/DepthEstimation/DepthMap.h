@@ -60,7 +60,7 @@ public:
 	/**
 	 * does propagation and whole-filling-regularization (no observation, for that need to call updateKeyframe()!)
 	 **/
-	void createKeyFrame(Frame* new_keyframe);
+	virtual void createKeyFrame(Frame* new_keyframe);
 	
 	/**
 	 * does one fill holes iteration

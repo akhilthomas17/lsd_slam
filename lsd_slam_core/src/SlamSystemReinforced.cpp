@@ -44,6 +44,7 @@ SlamSystemReinforced::SlamSystemReinforced(int w, int h, Eigen::Matrix3f K, bool
     // Do not use more than 4 levels for odometry tracking
     for (int level = 4; level < PYRAMID_LEVELS; ++level)
         tracker->settings.maxItsPerLvl[level] = 0;
+    //thread_mapping = boost::thread(&SlamSystemReinforced::mappingThreadLoop, this);
     printf("Started SlamSystemReinforced\n");
 
     /*
@@ -164,7 +165,7 @@ void SlamSystemReinforced::trackFrame(cv::Mat* rgb, cv::Mat* depth, unsigned int
 	SE3 newRefToFrame_poseUpdate = tracker->trackFrameDeepTAM(
 			trackingReference,
 			trackingNewFrame.get(),
-			frameToReference_initialEstimate.inverse(), true);
+			frameToReference_initialEstimate.inverse(), false);
 
 	
 	//printf("Response from DeepTAM tracker\n");
@@ -312,7 +313,7 @@ void SlamSystemReinforced::trackFrameTest(cv::Mat* rgb, cv::Mat* depth, unsigned
 	SE3 newRefToFrame_poseUpdate = tracker->trackFrameDeepTAM(
 			trackingReference,
 			trackingNewFrame.get(),
-			frameToReference_initialEstimate.inverse(), false);
+			frameToReference_initialEstimate.inverse(), true);
 
 
 	gettimeofday(&tv_end, NULL);
@@ -389,6 +390,8 @@ void SlamSystemReinforced::trackFrameTest(cv::Mat* rgb, cv::Mat* depth, unsigned
 	}
 }
 
+/** 
+
 void SlamSystemReinforced::createNewCurrentKeyframe(std::shared_ptr<Frame> newKeyframeCandidate)
 {
  if(enablePrintDebugInfo && printThreadingInfo)
@@ -420,3 +423,4 @@ void SlamSystemReinforced::createNewCurrentKeyframe(std::shared_ptr<Frame> newKe
  currentKeyFrame = newKeyframeCandidate;
  currentKeyFrameMutex.unlock();
 }
+//**/

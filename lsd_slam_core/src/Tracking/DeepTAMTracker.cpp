@@ -61,6 +61,14 @@ SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame
     srv.request.current_image = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(frame->rgbMat()) ).toImageMsg());
     srv.request.intrinsics = {frame->fx(), frame->fy(), frame->cx(), frame->cy()};
 
+    if (debug)
+    {
+        cv_bridge::CvImagePtr cvImagergb = cv_bridge::toCvCopy(srv.request.keyframe_image, "");
+        ROS_WARN("Test for rgb passed");
+        cv_bridge::CvImagePtr cvImagedepth = cv_bridge::toCvCopy(srv.request.keyframe_depth, "");
+        ROS_WARN("Test for depth passed");
+    }
+
     srv.request.rotation_prior[0] = referenceToFrame_initialEstimate.so3().log().cast<float>()[0];
     srv.request.rotation_prior[1] = referenceToFrame_initialEstimate.so3().log().cast<float>()[1];
     srv.request.rotation_prior[2] = referenceToFrame_initialEstimate.so3().log().cast<float>()[2];
@@ -119,7 +127,7 @@ SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame
     }
     else
     {
-        ROS_INFO("No response!!");
+        ROS_INFO("No response from DeepTAM tracker node!!");
     }
 
     return frameToReference;

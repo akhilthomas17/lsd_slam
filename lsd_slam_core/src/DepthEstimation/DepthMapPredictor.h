@@ -22,8 +22,7 @@ namespace lsd_slam
   {
   public:
     DepthMapPredictor(int w, int h, const Eigen::Matrix3f& K);
-    void createKeyframeManager(Frame* new_keyframe);
-    void createKeyframePredicted(Frame* new_keyframe);
+    void createKeyFrame(Frame* new_keyframe);
   private:
     ros::NodeHandle nh;
     ros::ServiceClient depthClient;

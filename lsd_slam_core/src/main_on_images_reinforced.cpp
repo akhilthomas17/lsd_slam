@@ -289,7 +289,6 @@ int main( int argc, char** argv )
 
 	// make slam system
 	SlamSystemReinforced* system = new SlamSystemReinforced(w, h, K, doSlam);
-	system->init(w, h, K);
 	system->setVisualization(outputWrapper);
 
 
