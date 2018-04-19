@@ -73,7 +73,8 @@ namespace lsd_slam
 #define FAIL_VAR_INC_FAC 1.1f // after a failed stereo observation, the variance is increased by this factor.
 #define MAX_VAR (0.5f*0.5f) // initial variance on creation - if variance becomes larter than this, hypothesis is removed.
 
-#define VAR_GT_INIT_INITIAL 0.01f*0.01f	// initial variance vor Ground Truth Initialization
+// Added by Akhil (To change the variance of depth predictions)
+#define VAR_GT_INIT_INITIAL (freeDebugParam1)	// initial variance vor Ground Truth Initialization
 #define VAR_RANDOM_INIT_INITIAL (0.5f*MAX_VAR)	// initial variance vor Random Initialization
 
 
@@ -231,7 +232,6 @@ extern int maxLoopClosureCandidates;
 extern int propagateKeyFrameDepthCount;
 extern float loopclosureStrictness;
 extern float relocalizationTH;
-
 
 extern float minUseGrad;
 extern float cameraPixelNoise2;

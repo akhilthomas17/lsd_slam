@@ -75,6 +75,9 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
 
   if(predictDepth){
 
+    /** Temporararilly store the currentDepthMap propagated **/
+    memcpy(otherDepthMap,currentDepthMap,width*height*sizeof(DepthMapPixelHypothesis));
+
     /** Get the depth prediction from network **/
     //** Call Depth Node **//
     ROS_WARN("Predicting depth using network");
@@ -101,7 +104,7 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
       }
 
       cv::Mat predicted_depth;
-      cv::resize(cvImage->image, predicted_depth, cv::Size(640, 480));
+      cv::resize(cvImage->image, predicted_depth, cv::Size(width, height));
 
       // Multiplying the predicted depth by the previous depthmap's scale. LSD SLAM assumes depth to be this way!
       predicted_depth *= float(1/prev_scale);
@@ -116,9 +119,8 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
 
       //** Use predicted depth to initialize current depth map **//
       new_keyframe->setDepthFromGroundTruth(reinterpret_cast<float*>(predicted_depth.data));
-      ROS_WARN("Finished setDepthFromGroundTruth");
-      initializeFromGTDepth(new_keyframe);
-      ROS_WARN("Finished initializeFromGTDepth");
+      //** Fuse the predicted depthmap (*currentDepthMap) with projected depthmap (*otherDepthMap) **//
+      fuseDepthMapsManual(new_keyframe);
     }
     else
       ROS_INFO("No response from depth predictor node!!");
@@ -159,8 +161,75 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
   msCreate = 0.9*msCreate + 0.1*((tv_end_all.tv_sec-tv_start_all.tv_sec)*1000.0f + (tv_end_all.tv_usec-tv_start_all.tv_usec)/1000.0f);
   nCreate++;
 
-
-
   //if(plotStereoImages)
     //Util::displayImage( "KeyFramePropagation", debugImageHypothesisPropagation );
+}
+
+void DepthMapPredictor::fuseDepthMapsManual(Frame* new_frame)
+{
+  /** 
+  otherDepthMap is the projected depthmap, new_keyframe has the predicted depthmap. 
+  This function updates the depth and variance of currentDepthMap based on otherDepthMap.
+  **/
+  assert(new_frame->hasIDepthBeenSet());
+
+  activeKeyFramelock = new_frame->getActiveLock();
+  activeKeyFrame = new_frame;
+  activeKeyFrameImageData = activeKeyFrame->image(0);
+  activeKeyFrameIsReactivated = false;
+
+  // Get the predicted idepth and idepth variance
+  const float* idepth_predicted = new_frame->idepth();
+  const float* idepth_var_predicted = new_frame->idepthVar();
+
+  for(int y=0;y<height;y++)
+  {
+    for(int x=0;x<width;x++)
+    {
+      // Check if projected values exists for this pixel. If so, merge with predicted values
+      if(otherDepthMap[x+y*width].isValid)
+      {
+        // Check if the value predicted for this pixel is valid. If so, merge with projected values
+        if(!isnanf(idepth_predicted[x+y*width]) && idepth_predicted[x+y*width] > 0)
+        {
+          float sumIdepthVar = otherDepthMap[x+y*width].idepth_var + idepth_var_predicted[x+y*width];
+          float idepthValue = ( (idepth_predicted[x+y*width] * otherDepthMap[x+y*width].idepth_var) +
+                            (otherDepthMap[x+y*width].idepth * idepth_var_predicted[x+y*width]) ) / sumIdepthVar;
+          float idepthVarValue = (otherDepthMap[x+y*width].idepth_var * idepth_var_predicted[x+y*width]) / sumIdepthVar;
+          currentDepthMap[x+y*width] = DepthMapPixelHypothesis(
+              idepthValue,
+              idepthValue,
+              idepthVarValue,
+              idepthVarValue,
+              20);
+        }
+        // Else, directly use the projected values
+        else
+        {
+          currentDepthMap[x+y*width] = otherDepthMap[x+y*width];
+        }
+      }
+      // Else directly use the predicted depth value if exists
+      else
+      {
+        // Check if the value predicted for this pixel is valid. If so, merge with projected values
+        if(!isnanf(idepth_predicted[x+y*width]) && idepth_predicted[x+y*width] > 0)
+        {
+          currentDepthMap[x+y*width] = DepthMapPixelHypothesis(
+              idepth_predicted[x+y*width],
+              idepth_predicted[x+y*width],
+              idepth_var_predicted[x+y*width],
+              idepth_var_predicted[x+y*width],
+              20);
+        }
+        // Else, make current value blacklisted and invalid
+        else
+        {
+          currentDepthMap[x+y*width].isValid = false;
+          currentDepthMap[x+y*width].blacklisted = 0;
+        }
+      }
+    }
+  }
+  //activeKeyFrame->setDepth(currentDepthMap);
 }

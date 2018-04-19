@@ -68,7 +68,7 @@ bool plotStereoImages = false;
 bool plotTracking = false;
 
 
-float freeDebugParam1 = 1;
+float freeDebugParam1 = 0.01f*0.01f;
 float freeDebugParam2 = 1;
 float freeDebugParam3 = 1;
 float freeDebugParam4 = 1;
