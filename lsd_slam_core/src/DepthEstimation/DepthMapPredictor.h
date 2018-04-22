@@ -23,9 +23,16 @@ namespace lsd_slam
   public:
     DepthMapPredictor(int w, int h, const Eigen::Matrix3f& K);
     void createKeyFrame(Frame* new_keyframe);
-    void fuseDepthMapsManual(Frame* new_keyframe);
   private:
+    void fuseDepthMapsManual(Frame* new_keyframe);
+    void fuseDepthMapsManual(const float* idepth_predicted, float* idepth_combined);
+    void debugPlotsDepthFusion(const float* idepth_predicted, const float* depth_gt);
     ros::NodeHandle nh;
     ros::ServiceClient depthClient;
+    /** For Debug plots **/
+    cv::Mat debugIdepthPredicted;
+    cv::Mat debugIdepthPropagated;
+    cv::Mat debugIdepthCombined;
+    cv::Mat debugIdepthGt;
   };
 }

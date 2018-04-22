@@ -57,6 +57,10 @@ public:
 	    data.rgbImage = imgRGB;
 	    data.depthImage = imgDepth;
 	}
+	void setCVDepth(cv::Mat& imgDepth)
+	{
+		data.depthImage = imgDepth;
+	}
 
 	/** Sets or updates idepth and idepthVar on level zero. Invalidates higher levels. */
 	void setDepth(const DepthMapPixelHypothesis* newDepth);
