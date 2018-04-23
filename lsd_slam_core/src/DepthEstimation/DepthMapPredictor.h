@@ -34,5 +34,6 @@ namespace lsd_slam
     cv::Mat debugIdepthPropagated;
     cv::Mat debugIdepthCombined;
     cv::Mat debugIdepthGt;
+    bool printDepthPredictionDebugs;
   };
 }

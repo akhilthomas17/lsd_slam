@@ -12,6 +12,7 @@ DepthMapPredictor::DepthMapPredictor(int w, int h, const Eigen::Matrix3f& K) : D
   debugIdepthPropagated = cv::Mat(h,w, CV_8UC3);
   debugIdepthCombined = cv::Mat(h,w, CV_8UC3);
   debugIdepthGt = cv::Mat(h,w, CV_8UC3);
+  printDepthPredictionDebugs = false;
   ROS_INFO("Started DepthMapPredictor");
 }
 
@@ -80,7 +81,7 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
 
   if(predictDepth){
 
-    /** Temporararilly store the currentDepthMap propagated **/
+    /** Store the currentDepthMap propagated inside otherDepthMap **/
     memcpy(otherDepthMap,currentDepthMap,width*height*sizeof(DepthMapPixelHypothesis));
 
     /** Get the depth prediction from network **/
@@ -90,14 +91,9 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
     srv.request.rgb_image = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(new_keyframe->rgbMat()) ).toImageMsg());
     if(depthClient.call(srv)){
       ROS_INFO("Depth prediction received");
-      //CV::Mat predicted_depth = convert srv.response.predicted_depth to cv mat
-      //srv.response.depthmap.step = double(srv.response.depthmap.step);
-      ROS_WARN("srv.response.depthmap.step: %d", srv.response.depthmap.step);
-      ROS_WARN("srv.response.depthmap.Header: %d", srv.response.depthmap.header.seq);
-      ROS_WARN("srv.response.depthmap.encoding: %s", srv.response.depthmap.encoding.c_str());
 
+      //** convert srv.response.predicted_depth to cv mat **//
       cv_bridge::CvImagePtr cvImage;
-      
       try
       {
         cvImage = cv_bridge::toCvCopy(srv.response.depthmap, "");
@@ -108,25 +104,35 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
         return;
       }
 
-      // Network returns predicted idepth
+      // Network returns predicted idepth of 320x240. Resize it to 640x480
       cv::resize(cvImage->image, predicted_idepth, cv::Size(width, height));
-      // Multiplying the predicted idepth by the previous depthmap's scale. LSD SLAM assumes idepth to be this way!
+      // Multiplying the predicted idepth by the previous depthmap's scale. LSD SLAM assumes idepth to be at this scale!
       predicted_idepth *= prev_scale;
-      printf("predicted_idepth encoding: %d \n",predicted_idepth.type());
-      printf("Converted size predicted_idepth rows:%d and cols:%d \n", predicted_idepth.rows, predicted_idepth.cols);
 
       /** Fuse predicted and projected (*otherDepthMap) idepths to make combined depthmap **/
-      // Mat to store combined(predicted + projected) depth
+      // Mat to store combined (predicted + projected) depth
       cv::Mat combined_depth(cv::Size(width, height), CV_32FC1, float(0));
       fuseDepthMapsManual(reinterpret_cast<float*>(predicted_idepth.data), reinterpret_cast<float*>(combined_depth.data));
 
       //** Sparsify combined depth and update currentDepthMap (Todo) **//
       //new_keyframe->setDepthFromGroundTruth(reinterpret_cast<float*>(combined_depth.data));
 
-      /** Convert the scale of combined_depth back to world (m) and save it inside frame **/
+      /** Convert the scale of combined_depth back to original (m) and save it inside frame **/
       combined_depth *= prev_scale;
-      //activeKeyFrame->setCVDepth(combined_depth);
+      if(!useGtDepth)
+        activeKeyFrame->setCVDepth(combined_depth);
 
+    }
+    else
+      ROS_ERROR("No response from depth predictor node!!");
+
+    if (printDepthPredictionDebugs)
+    {
+      ROS_DEBUG("srv.response.depthmap.step: %d", srv.response.depthmap.step);
+      ROS_DEBUG("srv.response.depthmap.Header: %d", srv.response.depthmap.header.seq);
+      ROS_DEBUG("srv.response.depthmap.encoding: %s", srv.response.depthmap.encoding.c_str());
+      ROS_DEBUG("predicted_idepth encoding: %d",predicted_idepth.type());
+      ROS_DEBUG("Converted size predicted_idepth rows:%d and cols:%d", predicted_idepth.rows, predicted_idepth.cols);
       /**
       //Normal Plotting for debugs:
       cv::Mat predicted_idepth_plot, combined_depth_plot;
@@ -138,10 +144,7 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
       cv::imshow( "combined_depth", combined_depth_plot ); // Show our image inside it.
       cv::waitKey(0); // Wait for a keystroke in the window
       **/
-
     }
-    else
-      ROS_INFO("No response from depth predictor node!!");
   }
 
   // make mean inverse depth be one.
@@ -183,13 +186,16 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
     predicted_idepth *= rescaleFactor;
     cv::Mat depth_gt = activeKeyFrame->depthMat()->clone();
     depth_gt *= float(1/(rescaleFactor * prev_scale));
-    debugPlotsDepthFusion(reinterpret_cast<float*>(predicted_idepth.data), reinterpret_cast<float*>(depth_gt.data));
-    Util::displayImage( "iDEPTH Predicted", debugIdepthPredicted, true );
-    Util::displayImage( "iDEPTH Propagated", debugIdepthPropagated, true );
-    Util::displayImage( "iDEPTH Combined", debugIdepthCombined, true );
-    Util::displayImage( "iDEPTH GT", debugIdepthGt, true );
+    if(plotDepthFusion)
+    {
+      debugPlotsDepthFusion(reinterpret_cast<float*>(predicted_idepth.data), reinterpret_cast<float*>(depth_gt.data));
+      Util::displayImage( "iDEPTH Predicted", debugIdepthPredicted, true );
+      Util::displayImage( "iDEPTH Propagated", debugIdepthPropagated, true );
+      Util::displayImage( "iDEPTH Combined", debugIdepthCombined, true );
+      Util::displayImage( "iDEPTH GT", debugIdepthGt, true );
 
-    int waikey = Util::waitKey(0);
+      int waikey = Util::waitKey(0);
+    }
   }
 
 

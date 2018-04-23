@@ -259,6 +259,8 @@ extern bool manualTrackingLossIndicated;
 
 //** Added by Akhil **//
  extern bool predictDepth;
+ extern bool useGtDepth;
+ extern bool plotDepthFusion;
 
 class RunningStats
 {

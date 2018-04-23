@@ -118,6 +118,8 @@ std::string packagePath = "";
 
   //** Added by Akhil **//
   bool predictDepth = false;
+  bool useGtDepth = true;
+  bool plotDepthFusion = false;
   
 void handleKey(char k)
 {
