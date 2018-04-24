@@ -261,6 +261,8 @@ extern bool manualTrackingLossIndicated;
  extern bool predictDepth;
  extern bool useGtDepth;
  extern bool plotDepthFusion;
+ extern bool gtBootstrap;
+ extern bool optimizeDeepTAM;
 
 class RunningStats
 {

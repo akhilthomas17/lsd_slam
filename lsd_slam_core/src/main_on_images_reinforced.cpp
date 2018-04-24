@@ -335,6 +335,13 @@ int main( int argc, char** argv )
         // check program mode selectors
 	ROS_WARN("predictDepth_mode: %d", predictDepth);
 	ROS_WARN("doSLAM_mode: %d", doSlam);
+	ROS_WARN("useGtDepth: %d", useGtDepth);
+	ROS_WARN("gtBootstrap: %d", gtBootstrap);
+	ROS_WARN("plotDepthFusion: %d", plotDepthFusion);
+	ROS_WARN("minUseGrad: %f", minUseGrad);
+	ROS_WARN("freeDebugParam1 (Variance of depth prediction): %f", freeDebugParam1);
+	ROS_WARN("optimizeDeepTAM: %d", optimizeDeepTAM);
+	
 
 	cv::Mat image = cv::Mat(h,w,CV_8U);
 	int runningIDX=0;
@@ -372,9 +379,19 @@ int main( int argc, char** argv )
             //cv::imshow("depth 0", depthImg);
             //cv::imshow("depth1", depthImg);
             //cv::waitKey(0);
-            system->gtDepthInit(&image, &depthImg, fakeTimeStamp, runningIDX);
             std::cout << "Press ENTER to continue...";
             std::cin.ignore( std::numeric_limits<std::streamsize>::max(), '\n' );
+            cv::Mat depthImage(cv::Size(w, h), CV_32FC1);
+            bool success = true;
+            if(!gtBootstrap)
+            	success = system->getDepthPrediction(image, depthImage);
+            else
+            	depthImage = depthImg;
+            if (success)
+            	system->gtDepthInit(&image, &depthImage, fakeTimeStamp, runningIDX);
+            else
+            	system->randomInit(image.data, fakeTimeStamp, runningIDX);
+            
         } else
         	system->trackFrame(&image, &depthImg, runningIDX, hz == 0, fakeTimeStamp);
 		runningIDX++;

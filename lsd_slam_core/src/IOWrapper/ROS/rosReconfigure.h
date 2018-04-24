@@ -105,6 +105,8 @@ void dynConfCb(lsd_slam_core::LSDParamsConfig &config, uint32_t level)
 	//** Added by Akhil **//
 	predictDepth = config.predictDepth;
 	useGtDepth = config.useGtDepth;
+	gtBootstrap = config.gtBootstrap;
+	optimizeDeepTAM = config.optimizeDeepTAM;
 }
 
 }

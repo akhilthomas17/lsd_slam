@@ -1,7 +1,8 @@
 #pragma once
 #include "SlamSystem.h"
-#include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include "opencv2/opencv.hpp"
+
 
 
 namespace lsd_slam
@@ -21,6 +22,8 @@ void trackFrame(cv::Mat* rgb, cv::Mat* depth, unsigned int frameID, bool blockUn
 void trackFrameTest(cv::Mat* rgb, cv::Mat* depth, unsigned int frameID, bool blockUntilMapped, double timestamp);
 
 void gtDepthInit(cv::Mat* rgb, cv::Mat* depth, double timeStamp, int id);
+
+bool getDepthPrediction(const cv::Mat& rgb, cv::Mat& predicted_depth);
 
 private:
 

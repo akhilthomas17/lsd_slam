@@ -120,6 +120,8 @@ std::string packagePath = "";
   bool predictDepth = false;
   bool useGtDepth = true;
   bool plotDepthFusion = false;
+  bool gtBootstrap = true;
+  bool optimizeDeepTAM = true;
   
 void handleKey(char k)
 {
