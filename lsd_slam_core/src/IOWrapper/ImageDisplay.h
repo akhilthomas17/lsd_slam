@@ -24,6 +24,7 @@
 
 
 
+
 namespace lsd_slam
 {
 

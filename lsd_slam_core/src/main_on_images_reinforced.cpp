@@ -332,7 +332,7 @@ int main( int argc, char** argv )
 		hz = 0;
 	ros::param::del("~hz");
 
-        // check program mode selectors
+    // check program mode selectors
 	ROS_WARN("predictDepth_mode: %d", predictDepth);
 	ROS_WARN("doSLAM_mode: %d", doSlam);
 	ROS_WARN("useGtDepth: %d", useGtDepth);

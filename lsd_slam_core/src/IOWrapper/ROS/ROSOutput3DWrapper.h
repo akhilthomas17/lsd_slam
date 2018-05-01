@@ -62,25 +62,25 @@ public:
 	ROSOutput3DWrapper(int width, int height);
 	~ROSOutput3DWrapper();
 
-	virtual void publishKeyframeGraph(KeyFrameGraph* graph);
+	void publishKeyframeGraph(KeyFrameGraph* graph);
 
 	// publishes a keyframe. if that frame already existis, it is overwritten, otherwise it is added.
 	virtual void publishKeyframe(Frame* f);
 
 	// published a tracked frame that did not become a keyframe (i.e. has no depth data)
-	virtual void publishTrackedFrame(Frame* f);
+	void publishTrackedFrame(Frame* f);
 
 	// publishes graph and all constraints, as well as updated KF poses.
-	virtual void publishTrajectory(std::vector<Eigen::Matrix<float, 3, 1>> trajectory, std::string identifier);
+	void publishTrajectory(std::vector<Eigen::Matrix<float, 3, 1>> trajectory, std::string identifier);
 
-	virtual void publishTrajectoryIncrement(Eigen::Matrix<float, 3, 1> pt, std::string identifier);
+	void publishTrajectoryIncrement(Eigen::Matrix<float, 3, 1> pt, std::string identifier);
 
-	virtual void publishDebugInfo(Eigen::Matrix<float, 20, 1> data);
+	void publishDebugInfo(Eigen::Matrix<float, 20, 1> data);
 
 
 	int publishLvl;
 	
-private:
+protected:
 	int width, height;
 
 	std::string liveframe_channel;

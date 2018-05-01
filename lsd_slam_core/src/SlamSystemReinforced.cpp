@@ -182,9 +182,9 @@ void SlamSystemReinforced::trackFrame(cv::Mat* rgb, cv::Mat* depth, unsigned int
 	if(enablePrintDebugInfo && printThreadingInfo)
 		printf("TRACKING %d on %d\n", trackingNewFrame->id(), trackingReferencePose->frameID);
 
-        poseConsistencyMutex.lock_shared();
-        Sim3 frameToReference_initialEstimate = trackingReferencePose->getCamToWorld().inverse() * keyFrameGraph->allFramePoses.back()->getCamToWorld();
-        poseConsistencyMutex.unlock_shared();
+    poseConsistencyMutex.lock_shared();
+    Sim3 frameToReference_initialEstimate = trackingReferencePose->getCamToWorld().inverse() * keyFrameGraph->allFramePoses.back()->getCamToWorld();
+    poseConsistencyMutex.unlock_shared();
 
 	struct timeval tv_start, tv_end;
 	gettimeofday(&tv_start, NULL);

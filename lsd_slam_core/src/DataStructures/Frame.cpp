@@ -51,6 +51,7 @@ Frame::Frame(int id, int width, int height, const Eigen::Matrix3f& K, double tim
 
 	if(enablePrintDebugInfo && printMemoryDebugInfo)
 		printf("ALLOCATED frame %d, now there are %d\n", this->id(), privateFrameAllocCount);
+	cvImagesSet_ = false;
 }
 
 Frame::Frame(int id, int width, int height, const Eigen::Matrix3f& K, double timestamp, const float* image)
@@ -65,6 +66,7 @@ Frame::Frame(int id, int width, int height, const Eigen::Matrix3f& K, double tim
 
 	if(enablePrintDebugInfo && printMemoryDebugInfo)
 		printf("ALLOCATED frame %d, now there are %d\n", this->id(), privateFrameAllocCount);
+	cvImagesSet_ = false;
 }
 
 Frame::~Frame()
