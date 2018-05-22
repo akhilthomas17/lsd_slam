@@ -49,6 +49,7 @@ void ROSRGBDStreamThread::rgbdCb(const sensor_msgs::ImageConstPtr& rgbMsg,const 
 {
     if(!haveCalib) return;
     cv_bridge::CvImagePtr rgb_ptr = cv_bridge::toCvCopy(rgbMsg, sensor_msgs::image_encodings::RGB8);
+    ROS_WARN("Input ROS encoding: %s", depthMsg->encoding.c_str());
     cv_bridge::CvImagePtr depth_ptr = cv_bridge::toCvCopy(depthMsg, "");
 
     if(rgbMsg->header.seq < (unsigned int)lastSEQ)

@@ -44,6 +44,8 @@ void dynConfCbDebug(lsd_slam_core::LSDDebugParamsConfig &config, uint32_t level)
 	plotStereoImages = config.plotStereoImages;
 	plotTrackingIterationInfo = config.plotTrackingIterationInfo;
 	plotTracking = config.plotTracking;
+	//** Added by Akhil **//
+	plotDepthFusion = config.plotDepthFusion;
 
 	printPropagationStatistics = config.printPropagationStatistics;
 	printFillHolesStatistics = config.printFillHolesStatistics;
@@ -99,6 +101,12 @@ void dynConfCb(lsd_slam_core::LSDParamsConfig &config, uint32_t level)
 	maxLoopClosureCandidates = config.maxLoopClosureCandidates;
 	loopclosureStrictness = config.loopclosureStrictness;
 	relocalizationTH = config.relocalizationTH;
+	
+	//** Added by Akhil **//
+	predictDepth = config.predictDepth;
+	useGtDepth = config.useGtDepth;
+	gtBootstrap = config.gtBootstrap;
+	optimizeDeepTAM = config.optimizeDeepTAM;
 }
 
 }

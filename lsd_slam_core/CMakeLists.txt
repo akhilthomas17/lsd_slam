@@ -54,6 +54,7 @@ set(lsd_SOURCE_FILES
   ${PROJECT_SOURCE_DIR}/src/LiveSLAMWrapper.cpp
   ${PROJECT_SOURCE_DIR}/src/LiveSLAMWrapperReinforced.cpp
   ${PROJECT_SOURCE_DIR}/src/DepthEstimation/DepthMap.cpp
+  ${PROJECT_SOURCE_DIR}/src/DepthEstimation/DepthMapPredictor.cpp
   ${PROJECT_SOURCE_DIR}/src/DepthEstimation/DepthMapPixelHypothesis.cpp
   ${PROJECT_SOURCE_DIR}/src/util/globalFuncs.cpp
   ${PROJECT_SOURCE_DIR}/src/util/SophusUtil.cpp
@@ -75,12 +76,14 @@ set(SOURCE_FILES
   ${PROJECT_SOURCE_DIR}/src/IOWrapper/ROS/ROSImageStreamThread.cpp
   ${PROJECT_SOURCE_DIR}/src/IOWrapper/ROS/ROSRGBDStreamThread.cpp
   ${PROJECT_SOURCE_DIR}/src/IOWrapper/ROS/ROSOutput3DWrapper.cpp
+  ${PROJECT_SOURCE_DIR}/src/IOWrapper/ROS/ROSOutputSaver.cpp
   ${PROJECT_SOURCE_DIR}/src/IOWrapper/OpenCV/ImageDisplay_OpenCV.cpp
 )
 
 include_directories(
   ${EIGEN3_INCLUDE_DIR}
   ${PROJECT_SOURCE_DIR}/src
+  ${PROJECT_SOURCE_DIR}/thirdparty
   ${PROJECT_SOURCE_DIR}/thirdparty/Sophus
   ${CSPARSE_INCLUDE_DIR} #Has been set by SuiteParse
   ${CHOLMOD_INCLUDE_DIR} #Has been set by SuiteParse
@@ -114,6 +117,6 @@ target_link_libraries(deepTAM_live_slam lsdslam)
 rosbuild_add_executable(deepTAM_dataset_slam src/main_on_images_reinforced.cpp)
 target_link_libraries(deepTAM_dataset_slam lsdslam)
 
-# build node to use images from disk with deepTAM in test mode
-rosbuild_add_executable(deepTAM_test_dataset_slam src/main_on_images_test.cpp)
-target_link_libraries(deepTAM_test_dataset_slam lsdslam)
+# build node to create training dataset for depth network
+rosbuild_add_executable(depth_training_data_gen src/main_training_data_gen.cpp)
+target_link_libraries(depth_training_data_gen lsdslam)

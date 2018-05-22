@@ -56,6 +56,11 @@ public:
 	{
 	    data.rgbImage = imgRGB;
 	    data.depthImage = imgDepth;
+	    cvImagesSet_ = true;
+	}
+	void setCVDepth(cv::Mat& imgDepth)
+	{
+		data.depthImage = imgDepth;
 	}
 
 	/** Sets or updates idepth and idepthVar on level zero. Invalidates higher levels. */
@@ -120,6 +125,7 @@ public:
 	inline void clear_refPixelWasGood();
 	inline cv::Mat* rgbMat();
 	inline cv::Mat* depthMat();
+	inline bool cvImagesSet();
 
 	/** Flags for use with require() and requirePyramid(). See the Frame class
 	  * documentation for their exact meaning. */
@@ -298,9 +304,10 @@ private:
 	  * representation in memory. Use release(Frame::ALL, false) to store on disk instead.
 	  * ONLY CALL THIS, if an exclusive lock on activeMutex is owned! */
 	bool minimizeInMemory();
+
+	// added by Akhil. To know whether CV Mat images are set
+	bool cvImagesSet_;
 };
-
-
 
 inline int Frame::id() const
 {
@@ -457,6 +464,7 @@ inline void Frame::clear_refPixelWasGood()
 	FrameMemory::getInstance().returnBuffer(reinterpret_cast<float*>(data.refPixelWasGood));
 	data.refPixelWasGood=0;
 }
+/** Added by Akhil **/
 
 inline cv::Mat* Frame::rgbMat()
 {
@@ -466,6 +474,11 @@ inline cv::Mat* Frame::rgbMat()
 inline cv::Mat* Frame::depthMat()
 {
 	return &(data.depthImage);
+}
+
+inline bool Frame::cvImagesSet()
+{
+	return cvImagesSet_;
 }
 
 }

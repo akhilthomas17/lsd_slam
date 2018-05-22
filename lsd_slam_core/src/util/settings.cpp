@@ -68,7 +68,7 @@ bool plotStereoImages = false;
 bool plotTracking = false;
 
 
-float freeDebugParam1 = 1;
+float freeDebugParam1 = 0.01f*0.01f;
 float freeDebugParam2 = 1;
 float freeDebugParam3 = 1;
 float freeDebugParam4 = 1;
@@ -116,7 +116,13 @@ bool manualTrackingLossIndicated = false;
 
 std::string packagePath = "";
 
-
+  //** Added by Akhil **//
+  bool predictDepth = false;
+  bool useGtDepth = true;
+  bool plotDepthFusion = false;
+  bool gtBootstrap = true;
+  bool optimizeDeepTAM = true;
+  
 void handleKey(char k)
 {
 	char kkk = k;

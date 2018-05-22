@@ -94,13 +94,14 @@ public:
 	/** Does an offline optimization step. */
 	void optimizeGraph();
 
-	inline Frame* getCurrentKeyframe() {return currentKeyFrame.get();}	// not thread-safe!
+	inline Frame* getCurrentKeyframe() {return currentKeyFrame.get();}	// not thread-safe!}
 
 	/** Returns the current pose estimate. */
 	SE3 getCurrentPoseEstimate();
 
-    /** (Akhil) Return pose of last finalized keyframe */
+    /** (Akhil) Return pose of last tracked frame */
     SE3 getLastKeyFramePose();
+	inline Frame* getLatestTrackedFrame() {return latestTrackedFrame.get();}
 
     /** Sets the visualization where point clouds and camera poses will be sent to. */
 	void setVisualization(Output3DWrapper* outputWrapper);

@@ -60,7 +60,7 @@ public:
 	/**
 	 * does propagation and whole-filling-regularization (no observation, for that need to call updateKeyframe()!)
 	 **/
-	void createKeyFrame(Frame* new_keyframe);
+	virtual void createKeyFrame(Frame* new_keyframe);
 	
 	/**
 	 * does one fill holes iteration
@@ -97,7 +97,7 @@ public:
 	// pointer to global keyframe graph
 	IndexThreadReduce threadReducer;
 
-private:
+protected:
 	// camera matrix etc.
 	Eigen::Matrix3f K, KInv;
 	float fx,fy,cx,cy;

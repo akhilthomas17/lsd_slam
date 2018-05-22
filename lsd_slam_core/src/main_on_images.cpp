@@ -362,11 +362,13 @@ int main( int argc, char** argv )
 		if(runningIDX == 0){
 			//system->randomInit(image.data, fakeTimeStamp, runningIDX);
             cv::Mat depthImg = cv::imread(depth_files[i], CV_LOAD_IMAGE_UNCHANGED);
-            cv::imshow("depth0", depthImg);
+            //cv::imshow("depth0", depthImg);
             depthImg.convertTo(depthImg, CV_32F, 0.0002);
             //cv::imshow("depth1", depthImg);
-            cv::waitKey(0);
+            //cv::waitKey(0);
             system->gtDepthInit(image.data, reinterpret_cast<float*>(depthImg.data), fakeTimeStamp, runningIDX);
+            std::cout << "Press ENTER to continue...";
+            std::cin.ignore( std::numeric_limits<std::streamsize>::max(), '\n' );
         } else
 			system->trackFrame(image.data, runningIDX ,hz == 0,fakeTimeStamp);
 		runningIDX++;
