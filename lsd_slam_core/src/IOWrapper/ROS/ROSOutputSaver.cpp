@@ -46,8 +46,8 @@ void ROSOutputSaver::publishKeyframe(Frame* f)
 	const float* idepthVarFloat = f->idepthVar();
 	int size = width*height;
 
-	half depthData[size];
-	half depthVarData[size];
+	half idepthData[size];
+	half idepthVarData[size];
 
 	float maxDepth = 0;
 	float maxDepthVar = 0;
@@ -56,17 +56,17 @@ void ROSOutputSaver::publishKeyframe(Frame* f)
 	{
 		if (*(idepthFloat + ii) > 0 && *(idepthVarFloat + ii)>0)
 		{
-			*(depthData+ii) = 1 / (*(idepthFloat+ii)/scale);
-			*(depthVarData+ii) = 1 / (*(idepthVarFloat+ii)/scale);
-			if(*(depthData+ii) > maxDepth)
-				maxDepth = *(depthData+ii);
-			if(*(depthVarData+ii) > maxDepthVar)
-				maxDepthVar = *(depthVarData+ii);
+			*(idepthData+ii) = *(idepthFloat+ii)/scale;
+			*(idepthVarData+ii) = *(idepthVarFloat+ii)/scale;
+			if(*(idepthData+ii) > maxDepth)
+				maxDepth = *(idepthData+ii);
+			if(*(idepthVarData+ii) > maxDepthVar)
+				maxDepthVar = *(idepthVarData+ii);
 		}
 		else
 		{
-			*(depthData+ii) = 0;
-			*(depthVarData+ii) = 0;
+			*(idepthData+ii) = 0;
+			*(idepthVarData+ii) = 0;
 		}
 	}
 
@@ -82,18 +82,21 @@ void ROSOutputSaver::publishKeyframe(Frame* f)
 
 	cv::imwrite(baseName + "_rgb.png", *rgb);
 	cv::imwrite(baseName + "_depthGT.png", *depthGt);
-	depthFile.write(reinterpret_cast<const char*> (&depthData), sizeof depthData);
-	depthVarFile.write(reinterpret_cast<const char*> (&depthVarData), sizeof depthVarData);
+	depthFile.write(reinterpret_cast<const char*> (&idepthData), sizeof idepthData);
+	depthVarFile.write(reinterpret_cast<const char*> (&idepthVarData), sizeof idepthVarData);
 
 	if (debug)
 	{
 		//printf("%s _rgb.png\n", baseName.c_str());
 		//ROS_WARN("cvImagesSet: %d", f->cvImagesSet());
+		printf("Iteration Number: %d\n", itrNum);
 		printf("Keyframe Id: %d\n", f->id());
 		ROS_WARN("Min depth gt: %f, Max depth gt: %f", min, max);
-		printf("Max depth sparse: %f\n", maxDepth);
-		printf("Max depthVar sparse: %f\n", maxDepthVar);
-		printf("scale obtained by ouput saver: %f\n", scale);
+		//printf("Max idepth sparse scaled: %f\n", *std::max_element(idepthFloat, idepthFloat+size));
+		printf("Max idepth sparse descaled: %f\n", maxDepth);
+		//printf("Max idepthVar sparse scaled: %f\n", *std::max_element(idepthVarFloat, idepthVarFloat+size));
+		printf("Max idepthVar sparse descaled: %f\n", maxDepthVar);
+		//printf("scale obtained by ouput saver: %f\n", scale);
 	}
 
 }

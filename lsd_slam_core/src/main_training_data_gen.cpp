@@ -22,7 +22,8 @@
 #include <ros/package.h>
 
 
-int getComboFileRgbdTUM (std::string source, std::vector<std::string> &rgb_files, std::vector<std::string> &depth_files, std::vector<double> &timestamps)
+int getComboFileRgbdTUM (std::string source, std::vector<std::string> &rgb_files, 
+	std::vector<std::string> &depth_files, std::vector<double> &timestamps, std::string basename, bool basename_received)
 {
     std::vector < std::vector<std::string>* > files;
     files.push_back(&rgb_files);
@@ -50,13 +51,20 @@ int getComboFileRgbdTUM (std::string source, std::vector<std::string> &rgb_files
         }
 
         f.close();
-
-        size_t sp = source.find_last_of('/');
         std::string prefix;
-        if (sp == std::string::npos)
-            prefix = "";
+
+        if(basename_received)
+        {
+        	prefix = basename;
+        }
         else
-            prefix = source.substr(0, sp);
+        {
+        	size_t sp = source.find_last_of('/');
+	        if (sp == std::string::npos)
+	            prefix = "";
+	        else
+	            prefix = source.substr(0, sp);
+        }
 
         for (int ii = 0; ii < 2; ii++)
         {
@@ -80,6 +88,7 @@ using namespace lsd_slam;
 
 int main( int argc, char** argv )
 {
+	bool _debug = false;
 	ros::init(argc, argv, "LSD_SLAM_TRAIN_DATA_GEN");
 
 	dynamic_reconfigure::Server<lsd_slam_core::LSDParamsConfig> srv(ros::NodeHandle("~"));
@@ -126,7 +135,8 @@ int main( int argc, char** argv )
 		itr_num = 0;
 
 	// open dataset sequence file (Assumed to be in RGBD sequence format)
-	std::string source;
+	std::string source, basename;
+	bool basename_received = false;
 	std::vector<std::string> rgb_files, depth_files;
 	// For reading timestamps from file
 	std::vector<double> timestamps;
@@ -137,6 +147,13 @@ int main( int argc, char** argv )
 		exit(0);
 	}
 	ros::param::del("~files");
+
+	if(ros::param::get("~basename", basename))
+	{
+		basename_received = true;
+		printf("Basename provided. Taking downloaded files from %s \n", basename);
+	}
+	ros::param::del("~basename");
 
 	// make output folder with the dataset name
 	size_t pos = source.find_last_of('/');
@@ -159,7 +176,7 @@ int main( int argc, char** argv )
 
 
 
-	if(getComboFileRgbdTUM(source, rgb_files, depth_files, timestamps) >= 0)
+	if(getComboFileRgbdTUM(source, rgb_files, depth_files, timestamps, basename, basename_received) >= 0)
 	{
 		printf("found %d rgb and depth files from file %s!\n", (int)rgb_files.size(), source.c_str());
 	}
@@ -241,12 +258,16 @@ int main( int argc, char** argv )
 		if ( !currentFrame->cvImagesSet() )
 		{
 			currentFrame->setCVImages(imageRgb, depthImg);
-			double min, max;
-			cv::minMaxLoc(depthImg, &min, &max);
-			ROS_WARN("Min depth: %f, Max depth: %f", min, max);
-			//printf("Set CV Images for current frame\n");
+			if(_debug)
+			{
+				double min, max;
+				cv::minMaxLoc(depthImg, &min, &max);
+				ROS_WARN("Min depth: %f, Max depth: %f", min, max);
+				//printf("Set CV Images for current frame\n");
+			}
 		}
-		ROS_WARN("runningIDX: %d", runningIDX);
+		if(_debug)
+			ROS_WARN("runningIDX: %d", runningIDX);
 
 		runningIDX++;
 
