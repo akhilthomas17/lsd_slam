@@ -2,15 +2,17 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+#include <half.hpp>
 
 using namespace lsd_slam;
+using half_float::half;
+
 
 DepthMapPredictor::DepthMapPredictor(int w, int h, const Eigen::Matrix3f& K) : DepthMap(w, h, K)
 {
-  depthClient = nh.serviceClient<reinforced_visual_slam::PredictDepthmap>("predict_depthmap");
-  debugIdepthPredicted = cv::Mat(h,w, CV_8UC3);
+  depthClient = nh.serviceClient<reinforced_visual_slam::DepthFusion>("fuse_depthmap");
   debugIdepthPropagated = cv::Mat(h,w, CV_8UC3);
-  debugIdepthCombined = cv::Mat(h,w, CV_8UC3);
+  debugIdepthFused = cv::Mat(h,w, CV_8UC3);
   debugIdepthGt = cv::Mat(h,w, CV_8UC3);
   printDepthPredictionDebugs = false;
   ROS_INFO("Started DepthMapPredictor");
@@ -76,51 +78,125 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
   msRegularize = 0.9*msRegularize + 0.1*((tv_end.tv_sec-tv_start.tv_sec)*1000.0f + (tv_end.tv_usec-tv_start.tv_usec)/1000.0f);
   nRegularize++;
 
-  printf("predictDepth: %d\n", predictDepth);
-  cv::Mat predicted_idepth;
+  /** Save images to file for depth training **/
+  if (writeDepthToFile)
+  {
+    activeKeyFrame->setDepth(currentDepthMap);
+    float scale = activeKeyFrame->getScaledCamToWorld().scale();
+    cv::Mat* depthGt = activeKeyFrame->depthMat();
+    //depthGt->convertTo(*depthGt, CV_16U, 5000); This was not needed inside pure LSD SLAM
+    cv::Mat* rgb = activeKeyFrame->rgbMat();
+
+    // De-scale the idepth and idepthVar stored back to world (m)
+    const float* idepthFloat = activeKeyFrame->idepth();
+    const float* idepthVarFloat = activeKeyFrame->idepthVar();
+    int size = width*height;
+
+    half idepthData[size];
+    half idepthVarData[size];
+
+    float maxDepth = 0;
+    float maxDepthVar = 0;
+
+    for (int ii=0; ii < size; ii++)
+    {
+      if (*(idepthFloat + ii) > 0 && *(idepthVarFloat + ii)>0)
+      {
+        *(idepthData+ii) = *(idepthFloat+ii)/scale;
+        *(idepthVarData+ii) = *(idepthVarFloat+ii)/scale;
+        if(*(idepthData+ii) > maxDepth)
+          maxDepth = *(idepthData+ii);
+        if(*(idepthVarData+ii) > maxDepthVar)
+          maxDepthVar = *(idepthVarData+ii);
+      }
+      else
+      {
+        *(idepthData+ii) = 0;
+        *(idepthVarData+ii) = 0;
+      }
+    }
+
+    std::string baseName = outputFolder + "/" + std::to_string(iterNum) 
+                + "_" + std::to_string(activeKeyFrame->timestamp()) 
+                + "_" + std::to_string(activeKeyFrame->id());
+
+    std::ofstream depthFile(baseName + "_sparse_depth.bin", std::ios::binary | std::ios::out);
+    std::ofstream depthVarFile(baseName + "_sparse_depthVar.bin", std::ios::binary | std::ios::out);
+
+    double min, max;
+    cv::minMaxLoc(*depthGt, &min, &max);
+
+    cv::imwrite(baseName + "_rgb.png", *rgb);
+    cv::imwrite(baseName + "_depthGT.png", *depthGt);
+    depthFile.write(reinterpret_cast<const char*> (&idepthData), sizeof idepthData);
+    depthVarFile.write(reinterpret_cast<const char*> (&idepthVarData), sizeof idepthVarData);
+
+    //printf("%s _rgb.png\n", baseName.c_str());
+    //ROS_WARN("cvImagesSet: %d", f->cvImagesSet());
+    ROS_WARN("Iteration Number: %d", iterNum);
+    printf("Keyframe Id: %d\n", activeKeyFrame->id());
+    printf("Min depth gt: %f, Max depth gt: %f\n", min, max);
+    //printf("Max idepth sparse scaled: %f\n", *std::max_element(idepthFloat, idepthFloat+size));
+    printf("Max idepth sparse descaled: %f\n", maxDepth);
+    //printf("Max idepthVar sparse scaled: %f\n", *std::max_element(idepthVarFloat, idepthVarFloat+size));
+    printf("Max idepthVar sparse descaled: %f\n", maxDepthVar);
+    //printf("scale obtained by ouput saver: %f\n", scale);
+
+  }
 
   if(predictDepth){
 
     /** Store the currentDepthMap propagated inside otherDepthMap **/
     memcpy(otherDepthMap,currentDepthMap,width*height*sizeof(DepthMapPixelHypothesis));
 
+    /** Create a float array of idepth and idepth variance **/
+    std::vector<float> idepth(width*height, 0.0);
+    std::vector<float> idepthVar(width*height, 0.0);
+    //float idepthVar[width*height];
+    fillIdepthArray(idepth.data(), idepthVar.data());
+
     /** Get the depth prediction from network **/
     //** Call Depth Node **//
     ROS_WARN("Predicting depth using network");
-    reinforced_visual_slam::PredictDepthmap srv;
-    srv.request.rgb_image = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(new_keyframe->rgbMat()) ).toImageMsg());
+    reinforced_visual_slam::DepthFusion srv;
+    srv.request.rgb_image = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(activeKeyFrame->rgbMat()) ).toImageMsg());
+    srv.request.idepth = idepth;
+    srv.request.idepth_var = idepthVar;
+    srv.request.scale = prev_scale;
     if(depthClient.call(srv)){
       ROS_INFO("Depth prediction received");
 
       //** convert srv.response.predicted_depth to cv mat **//
-      cv_bridge::CvImagePtr cvImage;
+      cv_bridge::CvImagePtr cvImage, cvResidue;
       try
       {
         cvImage = cv_bridge::toCvCopy(srv.response.depthmap, "");
+        cvResidue = cv_bridge::toCvCopy(srv.response.residual, "");
       }
       catch (cv_bridge::Exception& e)
       {
         ROS_ERROR("cv_bridge exception: %s", e.what());
         return;
       }
+      cv::Mat predicted_idepth;
 
       // Network returns predicted idepth of 320x240. Resize it to 640x480
       cv::resize(cvImage->image, predicted_idepth, cv::Size(width, height));
-      // Multiplying the predicted idepth by the previous depthmap's scale. LSD SLAM assumes idepth to be at this scale!
-      predicted_idepth *= prev_scale;
+      
+      //** Update currentDepthMap using the predicted depthmap (Todo) **//
+      // Convert the scale of fused_depth back to original (m)
+      cv::Mat fused_depth(cv::Size(width, height), CV_32FC1, float(0));
+      if(readSparse)
+        setFromIdepthMapSparse(reinterpret_cast<float*>(predicted_idepth.data), 
+          reinterpret_cast<float*>(fused_depth.data), prev_scale);
+      else
+        setFromIdepthMap(reinterpret_cast<float*>(predicted_idepth.data), 
+          reinterpret_cast<float*>(fused_depth.data), prev_scale);
+      // Todo: New setFromIdepthMap using the residual!!
 
-      /** Fuse predicted and projected (*otherDepthMap) idepths to make combined depthmap **/
-      // Mat to store combined (predicted + projected) depth
-      cv::Mat combined_depth(cv::Size(width, height), CV_32FC1, float(0));
-      fuseDepthMapsManual(reinterpret_cast<float*>(predicted_idepth.data), reinterpret_cast<float*>(combined_depth.data));
-
-      //** Sparsify combined depth and update currentDepthMap (Todo) **//
-      //new_keyframe->setDepthFromGroundTruth(reinterpret_cast<float*>(combined_depth.data));
-
-      /** Convert the scale of combined_depth back to original (m) and save it inside frame **/
-      combined_depth *= prev_scale;
+      /** Save fused depth it inside frame **/
       if(!useGtDepth)
-        activeKeyFrame->setCVDepth(combined_depth);
+        activeKeyFrame->setCVDepth(fused_depth);
 
     }
     else
@@ -131,10 +207,11 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
       ROS_DEBUG("srv.response.depthmap.step: %d", srv.response.depthmap.step);
       ROS_DEBUG("srv.response.depthmap.Header: %d", srv.response.depthmap.header.seq);
       ROS_DEBUG("srv.response.depthmap.encoding: %s", srv.response.depthmap.encoding.c_str());
-      ROS_DEBUG("predicted_idepth encoding: %d",predicted_idepth.type());
-      ROS_DEBUG("Converted size predicted_idepth rows:%d and cols:%d", predicted_idepth.rows, predicted_idepth.cols);
       /**
       //Normal Plotting for debugs:
+      ROS_DEBUG("predicted_idepth encoding: %d",predicted_idepth.type());
+      ROS_DEBUG("Converted size predicted_idepth rows:%d and cols:%d", predicted_idepth.rows, predicted_idepth.cols);
+
       cv::Mat predicted_idepth_plot, combined_depth_plot;
       cv::convertScaleAbs(predicted_idepth * float(255/4), predicted_idepth_plot);
       cv::convertScaleAbs(combined_depth * float(255/4), combined_depth_plot);
@@ -182,16 +259,14 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
       source->idepth_var_smoothed *= rescaleFactor2;
     }
 
-    /** Converting the scale of predicted idepth for plotting **/
-    predicted_idepth *= rescaleFactor;
+    /** Converting the scale of depth gt for plotting **/
     cv::Mat depth_gt = activeKeyFrame->depthMat()->clone();
     depth_gt *= float(1/(rescaleFactor * prev_scale));
     if(plotDepthFusion)
     {
-      debugPlotsDepthFusion(reinterpret_cast<float*>(predicted_idepth.data), reinterpret_cast<float*>(depth_gt.data));
-      Util::displayImage( "iDEPTH Predicted", debugIdepthPredicted, true );
-      Util::displayImage( "iDEPTH Propagated", debugIdepthPropagated, true );
-      Util::displayImage( "iDEPTH Combined", debugIdepthCombined, true );
+      debugPlotsDepthFusion(reinterpret_cast<float*>(depth_gt.data));
+      //Util::displayImage( "iDEPTH Propagated", debugIdepthPropagated, true );
+      Util::displayImage( "iDEPTH Combined", debugIdepthFused, true );
       Util::displayImage( "iDEPTH GT", debugIdepthGt, true );
 
       int waikey = Util::waitKey(0);
@@ -278,87 +353,18 @@ void DepthMapPredictor::fuseDepthMapsManual(const float* idepth_predicted, float
   }
 }
 
-void DepthMapPredictor::fuseDepthMapsManual(Frame* new_frame)
-{
-  /** 
-  otherDepthMap is the projected idepthmap, new_keyframe has the predicted idepthmap. 
-  This function updates the idepth and variance of currentDepthMap based on otherDepthMap.
-  **/
-  assert(new_frame->hasIDepthBeenSet());
-
-  activeKeyFramelock = new_frame->getActiveLock();
-  activeKeyFrame = new_frame;
-  activeKeyFrameImageData = activeKeyFrame->image(0);
-  activeKeyFrameIsReactivated = false;
-
-  // Get the predicted idepth and idepth variance
-  const float* idepth_predicted = new_frame->idepth();
-  const float* idepth_var_predicted = new_frame->idepthVar();
-
-  for(int y=0;y<height;y++)
-  {
-    for(int x=0;x<width;x++)
-    {
-      // Check if projected values exists for this pixel. If so, merge with predicted values
-      if(otherDepthMap[x+y*width].isValid)
-      {
-        // Check if the value predicted for this pixel is valid. If so, merge with projected values
-        if(!isnanf(idepth_predicted[x+y*width]) && idepth_predicted[x+y*width] > 0)
-        {
-          float sumIdepthVar = otherDepthMap[x+y*width].idepth_var + idepth_var_predicted[x+y*width];
-          float idepthValue = ( (idepth_predicted[x+y*width] * otherDepthMap[x+y*width].idepth_var) +
-                            (otherDepthMap[x+y*width].idepth * idepth_var_predicted[x+y*width]) ) / sumIdepthVar;
-          float idepthVarValue = (otherDepthMap[x+y*width].idepth_var * idepth_var_predicted[x+y*width]) / sumIdepthVar;
-          currentDepthMap[x+y*width] = DepthMapPixelHypothesis(
-              idepthValue,
-              idepthValue,
-              idepthVarValue,
-              idepthVarValue,
-              20);
-        }
-        // Else, directly use the projected values
-        else
-        {
-          currentDepthMap[x+y*width] = otherDepthMap[x+y*width];
-        }
-      }
-      // Else directly use the predicted depth value if exists
-      else
-      {
-        // Check if the value predicted for this pixel is valid. If so, merge with projected values
-        if(!isnanf(idepth_predicted[x+y*width]) && idepth_predicted[x+y*width] > 0)
-        {
-          currentDepthMap[x+y*width] = DepthMapPixelHypothesis(
-              idepth_predicted[x+y*width],
-              idepth_predicted[x+y*width],
-              idepth_var_predicted[x+y*width],
-              idepth_var_predicted[x+y*width],
-              20);
-        }
-        // Else, make current value blacklisted and invalid
-        else
-        {
-          currentDepthMap[x+y*width].isValid = false;
-          currentDepthMap[x+y*width].blacklisted = 0;
-        }
-      }
-    }
-  }
-  //activeKeyFrame->setDepth(currentDepthMap);
-}
-
-void DepthMapPredictor::debugPlotsDepthFusion(const float* idepth_predicted, const float* depth_gt)
+void DepthMapPredictor::debugPlotsDepthFusion(const float* depth_gt)
 {
   if(activeKeyFrame == 0) return;
 
   cv::Mat keyFrameImage(activeKeyFrame->height(), activeKeyFrame->width(), CV_32F, const_cast<float*>(activeKeyFrameImageData));
 
-  keyFrameImage.convertTo(debugIdepthPredicted, CV_8UC1);
-  cv::cvtColor(debugIdepthPredicted, debugIdepthPredicted, CV_GRAY2RGB);
   keyFrameImage.convertTo(debugIdepthPropagated, CV_8UC1);
   cv::cvtColor(debugIdepthPropagated, debugIdepthPropagated, CV_GRAY2RGB);
-  keyFrameImage.convertTo(debugIdepthCombined, CV_8UC1);
-  cv::cvtColor(debugIdepthCombined, debugIdepthCombined, CV_GRAY2RGB);
+  keyFrameImage.convertTo(debugIdepthFused, CV_8UC1);
+  cv::cvtColor(debugIdepthFused, debugIdepthFused, CV_GRAY2RGB);
+  keyFrameImage.convertTo(debugIdepthGt, CV_8UC1);
+  cv::cvtColor(debugIdepthGt, debugIdepthGt, CV_GRAY2RGB);
 
   // debug plot & publish sparse version?
   int refID = referenceFrameByID_offset;
@@ -372,30 +378,12 @@ void DepthMapPredictor::debugPlotsDepthFusion(const float* idepth_predicted, con
 
       if(currentDepthMap[idx].isValid) {
         cv::Vec3b color = currentDepthMap[idx].getVisualizationColor(refID);
-        debugIdepthCombined.at<cv::Vec3b>(y,x) = color;
+        debugIdepthFused.at<cv::Vec3b>(y,x) = color;
       }
 
       if(otherDepthMap[idx].isValid) {
         cv::Vec3b color = otherDepthMap[idx].getVisualizationColor(refID);
         debugIdepthPropagated.at<cv::Vec3b>(y,x) = color;
-      }
-
-      /** Make colour as per DepthMapPixelHypothesis::getVisualizationColor **/
-      float id =  idepth_predicted[idx];
-      if(id < 0)
-        debugIdepthPredicted.at<cv::Vec3b>(y,x) = cv::Vec3b(255,255,255);
-      else if(!isnanf(id))
-      {
-        // rainbow between 0 and 4
-        float r = (0-id) * 255 / 1.0; if(r < 0) r = -r;
-        float g = (1-id) * 255 / 1.0; if(g < 0) g = -g;
-        float b = (2-id) * 255 / 1.0; if(b < 0) b = -b;
-
-        uchar rc = r < 0 ? 0 : (r > 255 ? 255 : r);
-        uchar gc = g < 0 ? 0 : (g > 255 ? 255 : g);
-        uchar bc = b < 0 ? 0 : (b > 255 ? 255 : b);
-
-        debugIdepthPredicted.at<cv::Vec3b>(y,x) = cv::Vec3b(255-rc,255-gc,255-bc);
       }
 
       float d =  depth_gt[idx];
@@ -415,5 +403,96 @@ void DepthMapPredictor::debugPlotsDepthFusion(const float* idepth_predicted, con
 
     }
   }
+}
 
+void DepthMapPredictor::fillIdepthArray(float* idepth, float* idepthVar)
+{
+  for(int y=0;y<height;y++)
+  {
+    for(int x=0;x<width;x++)
+    { 
+      // Check if projected values exists for this pixel. If so, write to float array
+      if(currentDepthMap[x+y*width].isValid  && currentDepthMap[x+y*width].idepth_smoothed > 0 && 
+        !isnanf(currentDepthMap[x+y*width].idepth_smoothed))
+      {
+        idepth[x+y*width] = currentDepthMap[x+y*width].idepth_smoothed;
+        idepthVar[x+y*width] = currentDepthMap[x+y*width].idepth_var_smoothed;
+      }
+      else
+      {
+        idepth[x+y*width] = 0;
+        idepthVar[x+y*width] = 0;
+      }
+    }
+
+  }
+}
+
+void DepthMapPredictor::setFromIdepthMapSparse(const float* idepth_predicted, float* depth_fused, float scale)
+{
+  /** 
+  idepth_predicted is the fused idepthmap. 
+  This function updates the idepth and variance of currentDepthMap based on otherDepthMap (at current scale).
+  Also, it computes a new float* depth_fused (in m).
+  **/
+  for(int y=0;y<height;y++)
+  {
+    for(int x=0;x<width;x++)
+    {      
+      // Check if the value predicted for this pixel is valid. If so, merge with projected values
+      if(!isnanf(idepth_predicted[x+y*width]) && idepth_predicted[x+y*width] > 0)
+      {
+        //Check if the value exists at the point for current depthmap, if yes replace it with prediction!
+        if(currentDepthMap[x+y*width].isValid  
+          && currentDepthMap[x+y*width].idepth > 0 && !isnanf(currentDepthMap[x+y*width].idepth))
+        {
+          float idepth_scaled = idepth_predicted[x+y*width] * scale;
+          currentDepthMap[x+y*width].idepth = idepth_scaled;
+          currentDepthMap[x+y*width].idepth_smoothed = idepth_scaled;
+        }
+        depth_fused[x+y*width] = 1.0f/idepth_predicted[x+y*width];
+      }
+      // Else, make current value zero for the dense depth map
+      else
+      {
+        depth_fused[x+y*width] = 0;
+      }
+    }
+  }
+}
+
+void DepthMapPredictor::setFromIdepthMap(const float* idepth_predicted, float* depth_fused, float scale)
+{
+  /** 
+  idepth_predicted is the fused idepthmap. 
+  This function updates the idepth and variance of currentDepthMap based on otherDepthMap (at current scale).
+  Also, it computes a new float* depth_fused (in m).
+  **/
+  const float idepth_var_predicted = freeDebugParam1;
+
+  for(int y=0;y<height;y++)
+  {
+    for(int x=0;x<width;x++)
+    {      
+      // Check if the value predicted for this pixel is valid. If so, merge with projected values
+      if(!isnanf(idepth_predicted[x+y*width]) && idepth_predicted[x+y*width] > 0)
+      {
+        float idepth_scaled = idepth_predicted[x+y*width] * scale;
+        currentDepthMap[x+y*width] = DepthMapPixelHypothesis(
+            idepth_scaled,
+            idepth_scaled,
+            idepth_var_predicted,
+            idepth_var_predicted,
+            20);
+        depth_fused[x+y*width] = 1.0f/idepth_predicted[x+y*width];
+      }
+      // Else, make current value invalid
+      else
+      {
+        currentDepthMap[x+y*width].isValid = false;
+        currentDepthMap[x+y*width].blacklisted = 0;
+        depth_fused[x+y*width] = 0;
+      }
+    }
+  }
 }

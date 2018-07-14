@@ -12,7 +12,7 @@
 #include <iostream>
 #include <opencv2/imgproc/imgproc.hpp>
 
-#include <reinforced_visual_slam/PredictDepthmap.h>
+#include <reinforced_visual_slam/DepthFusion.h>
 #include <ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
 
@@ -24,15 +24,16 @@ namespace lsd_slam
     DepthMapPredictor(int w, int h, const Eigen::Matrix3f& K);
     void createKeyFrame(Frame* new_keyframe);
   private:
-    void fuseDepthMapsManual(Frame* new_keyframe);
+    void setFromIdepthMap(const float* idepth_predicted, float* depth_fused, float scale);
+    void setFromIdepthMapSparse(const float* idepth_predicted, float* depth_fused, float scale);
     void fuseDepthMapsManual(const float* idepth_predicted, float* idepth_combined);
-    void debugPlotsDepthFusion(const float* idepth_predicted, const float* depth_gt);
+    void debugPlotsDepthFusion(const float* depth_gt);
+    void fillIdepthArray(float* idepth, float* idepthVar);
     ros::NodeHandle nh;
     ros::ServiceClient depthClient;
     /** For Debug plots **/
-    cv::Mat debugIdepthPredicted;
     cv::Mat debugIdepthPropagated;
-    cv::Mat debugIdepthCombined;
+    cv::Mat debugIdepthFused;
     cv::Mat debugIdepthGt;
     bool printDepthPredictionDebugs;
   };

@@ -107,6 +107,8 @@ void dynConfCb(lsd_slam_core::LSDParamsConfig &config, uint32_t level)
 	useGtDepth = config.useGtDepth;
 	gtBootstrap = config.gtBootstrap;
 	optimizeDeepTAM = config.optimizeDeepTAM;
+	readSparse = config.readSparse;
+	writeDepthToFile = config.writeDepthToFile;
 }
 
 }

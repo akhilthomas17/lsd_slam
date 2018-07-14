@@ -91,6 +91,7 @@ SE3Tracker::SE3Tracker(int w, int h, Eigen::Matrix3f K)
 	lastGoodCount = lastBadCount = 0;
 
 	diverged = false;
+	printf("Started SE3Tracker\n");
 }
 
 SE3Tracker::~SE3Tracker()
@@ -282,12 +283,11 @@ SE3 SE3Tracker::trackFrame(
 		Frame* frame,
 		const SE3& frameToReference_initialEstimate)
 {
-
 	boost::shared_lock<boost::shared_mutex> lock = frame->getActiveLock();
 	diverged = false;
 	trackingWasGood = true;
-	affineEstimation_a = 1; affineEstimation_b = 0;
-
+	affineEstimation_a = 1; 
+	affineEstimation_b = 0;
 	if(saveAllTrackingStages)
 	{
 		saveAllTrackingStages = false;
@@ -317,7 +317,6 @@ SE3 SE3Tracker::trackFrame(
 	{
 		numCalcResidualCalls[lvl] = 0;
 		numCalcWarpUpdateCalls[lvl] = 0;
-
 		reference->makePointCloud(lvl);
 
 		callOptimized(calcResidualAndBuffers, (reference->posData[lvl], reference->colorAndVarData[lvl], SE3TRACKING_MIN_LEVEL == lvl ? reference->pointPosInXYGrid[lvl] : 0, reference->numData[lvl], frame, referenceToFrame, lvl, (plotTracking && lvl == SE3TRACKING_MIN_LEVEL)));
@@ -342,7 +341,6 @@ SE3 SE3Tracker::trackFrame(
 
 		for(int iteration=0; iteration < settings.maxItsPerLvl[lvl]; iteration++)
 		{
-
 			callOptimized(calculateWarpUpdate,(ls));
 
 			numCalcWarpUpdateCalls[lvl]++;
@@ -372,7 +370,6 @@ SE3 SE3Tracker::trackFrame(
 					trackingWasGood = false;
 					return SE3();
 				}
-
 				float error = callOptimized(calcWeightsAndResidual,(new_referenceToFrame));
 				numCalcResidualCalls[lvl]++;
 
@@ -478,7 +475,6 @@ SE3 SE3Tracker::trackFrame(
 
 	if(trackingWasGood)
 		reference->keyframe->numFramesTrackedOnThis++;
-
 	frame->initialTrackedResidual = lastResidual / pointUsage;
 	frame->pose->thisToParent_raw = sim3FromSE3(toSophus(referenceToFrame.inverse()),1);
 	frame->pose->trackingParent = reference->keyframe->pose;

@@ -8,6 +8,13 @@
 #include "Tracking/TrackingReference.h"
 #include "DataStructures/Frame.h"
 
+#include "Tracking/TrackingReference.h"
+#include "util/globalFuncs.h"
+#include "IOWrapper/ImageDisplay.h"
+#include "Tracking/LGSX.h"
+
+#include <Eigen/Core>
+
 #include <reinforced_visual_slam/TrackImage.h>
 #include <reinforced_visual_slam/TrackerStatus.h>
 #include <ros/ros.h>
@@ -15,8 +22,6 @@
 
 namespace lsd_slam
 {
-
-class SE3Tracker;
 
 class DeepTAMTracker: public SE3Tracker
 {

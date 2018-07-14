@@ -28,6 +28,11 @@
 #include "lsd_slam_viewer/keyframeGraphMsg.h"
 #include "lsd_slam_viewer/keyframeMsg.h"
 
+// for siasa visualization
+#include <reinforced_visual_slam/keyframeMsgSiasa.h>
+#include <cv_bridge/cv_bridge.h>
+
+
 #include "DataStructures/Frame.h"
 #include "GlobalMapping/KeyFrameGraph.h"
 #include "sophus/sim3.hpp"
@@ -48,6 +53,9 @@ ROSOutput3DWrapper::ROSOutput3DWrapper(int width, int height)
 
 	keyframe_channel = nh_.resolveName("lsd_slam/keyframes");
 	keyframe_publisher = nh_.advertise<lsd_slam_viewer::keyframeMsg>(keyframe_channel,1);
+
+	siasa_channel = nh_.resolveName("lsd_slam/siasa_keyframes");
+	siasa_publisher = nh_.advertise<reinforced_visual_slam::keyframeMsgSiasa>(siasa_channel,1);
 
 	graph_channel = nh_.resolveName("lsd_slam/graph");
 	graph_publisher = nh_.advertise<lsd_slam_viewer::keyframeGraphMsg>(graph_channel,1);
@@ -109,6 +117,25 @@ void ROSOutput3DWrapper::publishKeyframe(Frame* f)
 	}
 
 	keyframe_publisher.publish(fMsg);
+
+	reinforced_visual_slam::keyframeMsgSiasa kfMsg;
+	
+	kfMsg.id = f->id();
+	kfMsg.time = f->timestamp();
+	
+	memcpy(kfMsg.camToWorld.data(),f->getScaledCamToWorld().cast<float>().data(),sizeof(float)*7);
+	
+	kfMsg.fx = f->fx(publishLvl);
+	kfMsg.fy = f->fy(publishLvl);
+	kfMsg.cx = f->cx(publishLvl);
+	kfMsg.cy = f->cy(publishLvl);
+	kfMsg.width = w;
+	kfMsg.height = h;
+
+	kfMsg.rgb = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(f->rgbMat()) ).toImageMsg());
+	kfMsg.depth = *(cv_bridge::CvImage( std_msgs::Header(),"32FC1",*(f->depthMat()) ).toImageMsg());
+	siasa_publisher.publish(kfMsg);
+
 }
 
 void ROSOutput3DWrapper::publishTrackedFrame(Frame* kf)

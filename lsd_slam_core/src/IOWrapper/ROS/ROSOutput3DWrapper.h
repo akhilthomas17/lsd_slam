@@ -89,6 +89,9 @@ protected:
 	std::string keyframe_channel;
 	ros::Publisher keyframe_publisher;
 
+	std::string siasa_channel;
+	ros::Publisher siasa_publisher;
+
 	std::string graph_channel;
 	ros::Publisher graph_publisher;
 

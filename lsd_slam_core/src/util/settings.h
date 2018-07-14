@@ -74,7 +74,7 @@ namespace lsd_slam
 #define MAX_VAR (0.5f*0.5f) // initial variance on creation - if variance becomes larter than this, hypothesis is removed.
 
 // Added by Akhil (To change the variance of depth predictions)
-#define VAR_GT_INIT_INITIAL (freeDebugParam1)	// initial variance vor Ground Truth Initialization
+#define VAR_GT_INIT_INITIAL (0.01f*0.01f)	// initial variance vor Ground Truth Initialization
 #define VAR_RANDOM_INIT_INITIAL (0.5f*MAX_VAR)	// initial variance vor Random Initialization
 
 
@@ -263,6 +263,11 @@ extern bool manualTrackingLossIndicated;
  extern bool plotDepthFusion;
  extern bool gtBootstrap;
  extern bool optimizeDeepTAM;
+ extern bool readSparse;
+ extern bool writeDepthToFile;
+
+ extern std::string outputFolder;
+ extern int iterNum;
 
 class RunningStats
 {

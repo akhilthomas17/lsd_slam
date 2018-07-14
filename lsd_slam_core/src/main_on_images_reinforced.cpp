@@ -339,8 +339,9 @@ int main( int argc, char** argv )
 	ROS_WARN("gtBootstrap: %d", gtBootstrap);
 	ROS_WARN("plotDepthFusion: %d", plotDepthFusion);
 	ROS_WARN("minUseGrad: %f", minUseGrad);
-	ROS_WARN("freeDebugParam1 (Variance of depth prediction): %f", freeDebugParam1);
+	ROS_WARN("freeDebugParam1 (Variance guess of depth prediction): %f", freeDebugParam1);
 	ROS_WARN("optimizeDeepTAM: %d", optimizeDeepTAM);
+	ROS_WARN("readSparse: %d", readSparse);
 	
 
 	cv::Mat image = cv::Mat(h,w,CV_8U);

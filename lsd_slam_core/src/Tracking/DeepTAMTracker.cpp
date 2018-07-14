@@ -55,7 +55,6 @@ SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame
     Sim3 scaleInverter;
     scaleInverter.setScale(current_scale);
     SE3 referenceToFrame_initialEstimate = se3FromSim3(scaleInverter * referenceToFrame_initialEstimate_sim3);
-
     srv.request.keyframe_image = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(reference->keyframe->rgbMat()) ).toImageMsg());
     srv.request.keyframe_depth = *(cv_bridge::CvImage( std_msgs::Header(),"32FC1",*(reference->keyframe->depthMat()) ).toImageMsg());
     srv.request.current_image = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(frame->rgbMat()) ).toImageMsg());
@@ -95,7 +94,7 @@ SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame
         scaleInverter = Sim3();
         scaleInverter.setScale(1/current_scale);
         frameToReference = se3FromSim3(scaleInverter * frameToReference_unscaled);
-
+        
         if (optimize)
         {
             /** Optimizing DeepTAM tracking using the SE3 tracker */

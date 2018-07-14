@@ -1729,8 +1729,9 @@ void SlamSystem::savePosesTofile(const std::string& filename){
 			double timestamp = pose->frame->timestamp();			
 			//float* camToWorld = new float[7];
 			//memcpy(camToWorld, pose->getCamToWorld().cast<float>().data(), sizeof(float)*7);
-            Sophus::Quaternionf quat = pose->getCamToWorld().quaternion().cast<float>();
-            Eigen::Vector3f trans = pose->getCamToWorld().translation().cast<float>();
+			SE3 camToWorld = se3FromSim3(pose->getCamToWorld());
+            Sophus::Quaternionf quat = camToWorld.unit_quaternion().cast<float>();
+            Eigen::Vector3f trans = camToWorld.translation().cast<float>();
 
 			f << timestamp;
             f << " " << trans[0] << " " << trans[1] << " " << trans[2];

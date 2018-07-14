@@ -7,14 +7,18 @@
 #include "util/settings.h"
 #include "util/globalFuncs.h"
 #include "SlamSystem.h"
+#include "SlamSystemReinforced.h"
 #include "DataStructures/Frame.h"
 
 #include <sstream>
 #include <fstream>
 #include <dirent.h>
 #include <algorithm>
+#include <sys/stat.h>
+
 
 #include "IOWrapper/ROS/ROSOutputSaver.h"
+#include "IOWrapper/ROS/ROSOutput3DWrapper.h"
 #include "IOWrapper/ROS/rosReconfigure.h"
 #include "IOWrapper/OpenCV/ImageDisplay_OpenCV.cpp"
 
@@ -99,8 +103,6 @@ int main( int argc, char** argv )
 
 	packagePath = ros::package::getPath("lsd_slam_core")+"/";
 
-
-
 	// get camera calibration in form of an undistorter object.
 	// if no undistortion is required, the undistorter will just pass images through.
 	std::string calibFile;
@@ -163,17 +165,52 @@ int main( int argc, char** argv )
 
 	std::string resultFolder = "/misc/lmbraid19/thomasa/datasets/LSDDepthTraining/" + datsetName;
 
+	// check program mode selectors
+	doSlam = true;
+	freeDebugParam1 = 0.0001;
+	displayDepthMap = false;
+	predictDepth = false;
+	writeDepthToFile = true;
+	ROS_WARN("doSLAM_mode: %d", doSlam);
+	ROS_WARN("minUseGrad: %f", minUseGrad);
+	ROS_WARN("freeDebugParam1 (Variance of depth prediction): %f", VAR_GT_INIT_INITIAL);
+	ROS_WARN("displayDepthMap: %d", displayDepthMap);
+	ROS_WARN("predictDepth: %d", predictDepth);
+	ROS_WARN("writeDepthToFile: %d", writeDepthToFile);
 
-	// make output wrapper. just set to zero if no output is required.
-	Output3DWrapper* outputWrapper = new ROSOutputSaver(w, h, itr_num, resultFolder);
+	/** To include the old way!!
+	Output3DWrapper* outputWrapper;
+	SlamSystem* system;
 
-
-	// make slam system
-	SlamSystem* system = new SlamSystem(w, h, K, doSlam);
-	system->init(w, h, K);
+	if(!writeDepthToFile)
+	{
+		ROS_WARN("Creating a SlamSystem node..!");
+		printf("writeDepthToFile: %d\n",writeDepthToFile);
+		// make output wrapper. just set to zero if no output is required.
+		outputWrapper = new ROSOutputSaver(w, h, itr_num, resultFolder);
+		// make slam system
+		system = new SlamSystem(w, h, K, doSlam);
+		system->init(w, h, K);
+	}
+	else
+	{
+	**/
+	ROS_WARN("Creating a SlamSystemReinforced node..!");
+	Output3DWrapper* outputWrapper = new ROSOutput3DWrapper(w, h);
+	outputFolder = resultFolder;
+	iterNum = itr_num;
+	SlamSystemReinforced* system = new SlamSystemReinforced(w, h, K, doSlam);
+	//}
 	system->setVisualization(outputWrapper);
 
-
+	// creating the result folder
+	int status = mkdir(resultFolder.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+	if (status==0)
+		ROS_INFO("Created directory %s", resultFolder.c_str());
+	else if (status==EEXIST)
+		ROS_INFO("Directory %s exists", resultFolder.c_str());
+	else
+		ROS_INFO("Error %d in directory creation", status);
 
 
 	if(getComboFileRgbdTUM(source, rgb_files, depth_files, timestamps, basename, basename_received) >= 0)
@@ -201,18 +238,7 @@ int main( int argc, char** argv )
 		len_traj = rgb_files.size();
 	ros::param::del("~len_traj");
 
-	// check program mode selectors
-	doSlam = true;
-	freeDebugParam1 = 0.0001;
-	displayDepthMap = false;
-	ROS_WARN("doSLAM_mode: %d", doSlam);
-	ROS_WARN("minUseGrad: %f", minUseGrad);
-	ROS_WARN("freeDebugParam1 (Variance of depth prediction): %f", VAR_GT_INIT_INITIAL);
-	ROS_WARN("displayDepthMap: %d", displayDepthMap);
-
-
 	cv::Mat image = cv::Mat(h,w,CV_8U);
-	Frame* currentFrame;
 	int runningIDX=0;
 	double fakeTimeStamp = 0;
 
@@ -247,25 +273,12 @@ int main( int argc, char** argv )
 			cv::Mat init_image;
             depthImg.convertTo(init_image, CV_32F, 0.0002);
             system->gtDepthInit(image.data, reinterpret_cast<float*>(init_image.data), fakeTimeStamp, runningIDX);
-            currentFrame = system->getCurrentKeyframe();
         } 
         else
         {
-			system->trackFrame(image.data, runningIDX, hz == 0, fakeTimeStamp);
-			currentFrame =  system->getLatestTrackedFrame();
+			system->trackFrameLSD(&imageRgb, &depthImg, runningIDX, hz == 0, fakeTimeStamp);
         }
 
-		if ( !currentFrame->cvImagesSet() )
-		{
-			currentFrame->setCVImages(imageRgb, depthImg);
-			if(_debug)
-			{
-				double min, max;
-				cv::minMaxLoc(depthImg, &min, &max);
-				ROS_WARN("Min depth: %f, Max depth: %f", min, max);
-				//printf("Set CV Images for current frame\n");
-			}
-		}
 		if(_debug)
 			ROS_WARN("runningIDX: %d", runningIDX);
 

@@ -20,13 +20,6 @@ ROSOutputSaver::ROSOutputSaver(int width, int height, int newItrNum, std::string
 	
 	/** creating result folder **/
 	resultFolder = newResultFolder;
-	int status = mkdir(resultFolder.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-	if (status==0)
-		ROS_INFO("Created directory %s", resultFolder.c_str());
-	else if (status==EEXIST)
-		ROS_INFO("Directory %s exists", resultFolder.c_str());
-	else
-		ROS_INFO("Error %d in directory creation", status);
 }
 
 ROSOutputSaver::~ROSOutputSaver()
