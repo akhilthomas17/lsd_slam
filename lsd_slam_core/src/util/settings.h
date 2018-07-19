@@ -73,7 +73,6 @@ namespace lsd_slam
 #define FAIL_VAR_INC_FAC 1.1f // after a failed stereo observation, the variance is increased by this factor.
 #define MAX_VAR (0.5f*0.5f) // initial variance on creation - if variance becomes larter than this, hypothesis is removed.
 
-// Added by Akhil (To change the variance of depth predictions)
 #define VAR_GT_INIT_INITIAL (0.01f*0.01f)	// initial variance vor Ground Truth Initialization
 #define VAR_RANDOM_INIT_INITIAL (0.5f*MAX_VAR)	// initial variance vor Random Initialization
 
@@ -265,9 +264,12 @@ extern bool manualTrackingLossIndicated;
  extern bool optimizeDeepTAM;
  extern bool readSparse;
  extern bool writeDepthToFile;
+ extern bool depthCompletion;
+ extern bool testMode;
 
  extern std::string outputFolder;
  extern int iterNum;
+ extern float depthPredictionVariance;
 
 class RunningStats
 {

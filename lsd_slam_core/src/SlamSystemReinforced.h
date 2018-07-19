@@ -17,9 +17,9 @@ public:
 
 SlamSystemReinforced(int w, int h, Eigen::Matrix3f K, bool enableSLAM = true);
 
-void trackFrame(cv::Mat* rgb, cv::Mat* depth, unsigned int frameID, bool blockUntilMapped, double timestamp);
+void trackFrame(cv::Mat& rgb, cv::Mat& depthGt, unsigned int frameID, bool blockUntilMapped, double timestamp);
 
-void gtDepthInit(cv::Mat* rgb, cv::Mat* depth, double timeStamp, int id);
+void gtDepthInit(cv::Mat& rgb, cv::Mat& depth, double timeStamp, int id, cv::Mat gtDepth = cv::Mat());
 
 bool getDepthPrediction(const cv::Mat& rgb, cv::Mat& predicted_depth);
 

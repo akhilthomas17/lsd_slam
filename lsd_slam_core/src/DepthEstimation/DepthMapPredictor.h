@@ -13,6 +13,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 #include <reinforced_visual_slam/DepthFusion.h>
+#include <reinforced_visual_slam/PredictDepthmap.h>
 #include <ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
 
@@ -30,7 +31,7 @@ namespace lsd_slam
     void debugPlotsDepthFusion(const float* depth_gt);
     void fillIdepthArray(float* idepth, float* idepthVar);
     ros::NodeHandle nh;
-    ros::ServiceClient depthClient;
+    ros::ServiceClient depthClient, singleImageDepthClient;
     /** For Debug plots **/
     cv::Mat debugIdepthPropagated;
     cv::Mat debugIdepthFused;

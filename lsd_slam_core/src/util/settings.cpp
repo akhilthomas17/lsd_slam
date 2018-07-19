@@ -124,8 +124,11 @@ std::string packagePath = "";
   bool optimizeDeepTAM = true;
   bool readSparse = false;
   bool writeDepthToFile = false;
+  bool depthCompletion = false;
+  bool testMode = false;
   std::string outputFolder = "";
   int iterNum = 0;
+  float depthPredictionVariance = 1.0;
   
 void handleKey(char k)
 {

@@ -284,7 +284,13 @@ int main( int argc, char** argv )
 
 
 	// make output wrapper. just set to zero if no output is required.
-	Output3DWrapper* outputWrapper = new ROSOutput3DWrapper(w,h);
+
+	Output3DWrapper* outputWrapper;
+
+	if (testMode)
+		outputWrapper = new ROSOutputSaver(w,h);
+	else
+		outputWrapper = new ROSOutput3DWrapper(w,h);
 
 
 	// make slam system
@@ -339,9 +345,11 @@ int main( int argc, char** argv )
 	ROS_WARN("gtBootstrap: %d", gtBootstrap);
 	ROS_WARN("plotDepthFusion: %d", plotDepthFusion);
 	ROS_WARN("minUseGrad: %f", minUseGrad);
-	ROS_WARN("freeDebugParam1 (Variance guess of depth prediction): %f", freeDebugParam1);
+	ROS_WARN("depthPredictionVariance: %f", depthPredictionVariance);
 	ROS_WARN("optimizeDeepTAM: %d", optimizeDeepTAM);
 	ROS_WARN("readSparse: %d", readSparse);
+	ROS_WARN("depthCompletion: %d", depthCompletion);
+	ROS_WARN("testMode: %d", testMode);
 	
 
 	cv::Mat image = cv::Mat(h,w,CV_8U);
@@ -388,13 +396,18 @@ int main( int argc, char** argv )
             	success = system->getDepthPrediction(image, depthImage);
             else
             	depthImage = depthImg;
-            if (success)
-            	system->gtDepthInit(&image, &depthImage, fakeTimeStamp, runningIDX);
+            if (success){
+            	if(testMode)
+            		system->gtDepthInit(image, depthImage, fakeTimeStamp, runningIDX, depthImg);
+            	else
+            		system->gtDepthInit(image, depthImage, fakeTimeStamp, runningIDX);
+            }
             else
             	system->randomInit(image.data, fakeTimeStamp, runningIDX);
             
-        } else
-        	system->trackFrame(&image, &depthImg, runningIDX, hz == 0, fakeTimeStamp);
+        } else{
+        	system->trackFrame(image, depthImg, runningIDX, hz == 0, fakeTimeStamp);
+        }
 		runningIDX++;
 
 		if(hz != 0)

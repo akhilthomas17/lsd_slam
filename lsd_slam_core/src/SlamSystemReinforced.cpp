@@ -57,15 +57,15 @@ SlamSystemReinforced::SlamSystemReinforced(int w, int h, Eigen::Matrix3f K, bool
 }
 
 
-void SlamSystemReinforced::gtDepthInit(cv::Mat* rgb, cv::Mat* depth, double timeStamp, int id)
+void SlamSystemReinforced::gtDepthInit(cv::Mat& rgb, cv::Mat& depth, double timeStamp, int id, cv::Mat gtDepth)
 {
     printf("Doing GT initialization!\n");
 
     cv::Mat grayImg;
-    if (rgb->channels() > 1)
-    	cvtColor(*rgb, grayImg, CV_RGB2GRAY);
+    if (rgb.channels() > 1)
+    	cvtColor(rgb, grayImg, CV_RGB2GRAY);
     else
-    	grayImg = *rgb;
+    	grayImg = rgb;
 
 	// Scaling the depth Image (If input is in millimeters)
 	// cv::Mat depthImg;
@@ -74,9 +74,21 @@ void SlamSystemReinforced::gtDepthInit(cv::Mat* rgb, cv::Mat* depth, double time
 	currentKeyFrameMutex.lock();
 
 	currentKeyFrame.reset(new Frame(id, width, height, K, timeStamp, grayImg.data));
-	currentKeyFrame->setDepthFromGroundTruth(reinterpret_cast<float*>(depth->data));
-	// Adding CV Mat rgb and depth image pointers to the saved Frame
-	currentKeyFrame->setCVImages(rgb->clone(), depth->clone());
+	float cov_scale = 1;
+	if (gtBootstrap)
+	{
+		// Adding CV Mat rgb and GT depth image pointers to the current KeyFrame
+		currentKeyFrame->setCVImages(rgb.clone(), depth.clone());
+	}
+	else
+	{	
+		if (testMode)
+			currentKeyFrame->setCVGT(gtDepth.clone());
+		currentKeyFrame->setCVRGB(rgb.clone());
+		currentKeyFrame->setCVDepth(depth.clone());
+		cov_scale = depthPredictionVariance/VAR_GT_INIT_INITIAL;
+	}
+	currentKeyFrame->setDepthFromGroundTruth(reinterpret_cast<float*>(depth.data), cov_scale);
 
 	map->initializeFromGTDepth(currentKeyFrame.get());
 	keyFrameGraph->addFrame(currentKeyFrame.get());
@@ -155,18 +167,30 @@ bool SlamSystemReinforced::getDepthPrediction(const cv::Mat& rgb, cv::Mat& predi
 }
 
 
-void SlamSystemReinforced::trackFrame(cv::Mat* rgb, cv::Mat* depth, unsigned int frameID, bool blockUntilMapped, double timestamp)
+void SlamSystemReinforced::trackFrame(cv::Mat& rgb, cv::Mat& depthGt, unsigned int frameID, bool blockUntilMapped, 
+	double timestamp)
 {
 	cv::Mat grayImg;
 
-	if (rgb->channels() > 1)
-		cvtColor(*rgb, grayImg, CV_RGB2GRAY);
+	if (rgb.channels() > 1)
+		cvtColor(rgb, grayImg, CV_RGB2GRAY);
 	else
-		grayImg = *rgb;
+		grayImg = rgb;
 
 	// Create new frame
 	std::shared_ptr<Frame> trackingNewFrame(new Frame(frameID, width, height, K, timestamp, grayImg.data));
-	trackingNewFrame->setCVImages(rgb->clone(), depth->clone());
+
+	if (useGtDepth)
+	{
+		// Adding CV Mat GT and RGB to the current Frame
+		trackingNewFrame->setCVImages(rgb.clone(), depthGt.clone());
+	}
+	else
+	{	
+		if (testMode)
+			trackingNewFrame->setCVGT(depthGt.clone());
+		trackingNewFrame->setCVRGB(rgb.clone());
+	}
 
 	currentKeyFrameMutex.lock();
 	if(trackingReference->keyframe != currentKeyFrame.get() || currentKeyFrame->depthHasBeenUpdatedFlag)

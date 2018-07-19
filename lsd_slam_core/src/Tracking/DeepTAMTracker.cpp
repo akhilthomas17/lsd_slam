@@ -40,7 +40,7 @@ bool DeepTAMTracker::shakeHands()
 SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame,
                                         const Sim3& referenceToFrame_initialEstimate_sim3, bool optimize)
 {
-    bool debug = true;
+    bool debug = false;
     boost::shared_lock<boost::shared_mutex> lock = frame->getActiveLock();
     printf("Tracking current frame \n");
     reinforced_visual_slam::TrackImage srv;
@@ -51,12 +51,18 @@ SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame
         ROS_INFO("Type of RGB current Image LSD SLAM: %d", frame->rgbMat()->type());
         ROS_INFO("Scale of initial estimate guess: %f", current_scale);
     }
+
+    cv::Mat* keyframeDepth;
+    if(useGtDepth)
+        keyframeDepth =  reference->keyframe->depthGTMat();
+    else
+        keyframeDepth = reference->keyframe->depthMat();
     /** Converting the scale of initial guess passed to deepTAM. DeepTAM always expect at scale in m */
     Sim3 scaleInverter;
     scaleInverter.setScale(current_scale);
     SE3 referenceToFrame_initialEstimate = se3FromSim3(scaleInverter * referenceToFrame_initialEstimate_sim3);
     srv.request.keyframe_image = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(reference->keyframe->rgbMat()) ).toImageMsg());
-    srv.request.keyframe_depth = *(cv_bridge::CvImage( std_msgs::Header(),"32FC1",*(reference->keyframe->depthMat()) ).toImageMsg());
+    srv.request.keyframe_depth = *(cv_bridge::CvImage( std_msgs::Header(),"32FC1",*(keyframeDepth) ).toImageMsg());
     srv.request.current_image = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(frame->rgbMat()) ).toImageMsg());
     srv.request.intrinsics = {frame->fx(), frame->fy(), frame->cx(), frame->cy()};
 

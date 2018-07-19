@@ -88,12 +88,12 @@ void LiveSLAMWrapperReinforced::newImageCallback(cv::Mat& rgbImg, Timestamp imgT
 	// need to initialize
 	if(!isInitialized)
 	{
-		monoOdometry->gtDepthInit(&rgbImg, &depthImg, imgTime.toSec(), 1);
+		monoOdometry->gtDepthInit(rgbImg, depthImg, imgTime.toSec(), 1);
 		isInitialized = true;
 	}
 	else if(isInitialized && monoOdometry != nullptr)
 	{
-		monoOdometry->trackFrame(&rgbImg, &depthImg, imageSeqNumber, false, imgTime.toSec());
+		monoOdometry->trackFrame(rgbImg, depthImg, imageSeqNumber, false, imgTime.toSec());
 	}
     if (monoOdometry->keyFrameChanged)
     {

@@ -51,17 +51,26 @@ public:
 
 	~Frame();
 	
-	/** (Added by Akhil) To import cv::Mat RGB Images **/
-	void setCVImages(cv::Mat imgRGB, cv::Mat imgDepth)
+	/** (Added by Akhil) To import cv::Mat RGB, Depth GT n Depth Prediction Images **/
+	void setCVImages(cv::Mat imgRGB, cv::Mat imgGT)
 	{
 	    data.rgbImage = imgRGB;
-	    data.depthImage = imgDepth;
+	    data.gtDepth = imgGT;
 	    cvImagesSet_ = true;
 	}
-	void setCVDepth(cv::Mat& imgDepth)
+	void setCVDepth(cv::Mat imgDepth)
 	{
 		data.depthImage = imgDepth;
 	}
+	void setCVRGB(cv::Mat imgRGB)
+	{
+		data.rgbImage = imgRGB;
+	}
+	void setCVGT(cv::Mat imgGT)
+	{
+		data.gtDepth = imgGT;
+	}
+	/****/
 
 	/** Sets or updates idepth and idepthVar on level zero. Invalidates higher levels. */
 	void setDepth(const DepthMapPixelHypothesis* newDepth);
@@ -123,9 +132,13 @@ public:
 	inline bool* refPixelWasGood();
 	inline bool* refPixelWasGoodNoCreate();
 	inline void clear_refPixelWasGood();
+
+	/** Added by Akhil **/
 	inline cv::Mat* rgbMat();
 	inline cv::Mat* depthMat();
+	inline cv::Mat* depthGTMat();
 	inline bool cvImagesSet();
+	/******/
 
 	/** Flags for use with require() and requirePyramid(). See the Frame class
 	  * documentation for their exact meaning. */
@@ -254,8 +267,10 @@ private:
 		
 		double timestamp;
 
+		//** Added by Akhil (to store CV::Mat images for each frame) **//
 		cv::Mat rgbImage;
 		cv::Mat depthImage;
+		cv::Mat gtDepth;
 
 		float* image[PYRAMID_LEVELS];
 		bool imageValid[PYRAMID_LEVELS];
@@ -474,6 +489,11 @@ inline cv::Mat* Frame::rgbMat()
 inline cv::Mat* Frame::depthMat()
 {
 	return &(data.depthImage);
+}
+
+inline cv::Mat* Frame::depthGTMat()
+{
+	return &(data.gtDepth);
 }
 
 inline bool Frame::cvImagesSet()

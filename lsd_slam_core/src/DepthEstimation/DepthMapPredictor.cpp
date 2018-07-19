@@ -11,6 +11,7 @@ using half_float::half;
 DepthMapPredictor::DepthMapPredictor(int w, int h, const Eigen::Matrix3f& K) : DepthMap(w, h, K)
 {
   depthClient = nh.serviceClient<reinforced_visual_slam::DepthFusion>("fuse_depthmap");
+  singleImageDepthClient = nh.serviceClient<reinforced_visual_slam::PredictDepthmap>("predict_depthmap");
   debugIdepthPropagated = cv::Mat(h,w, CV_8UC3);
   debugIdepthFused = cv::Mat(h,w, CV_8UC3);
   debugIdepthGt = cv::Mat(h,w, CV_8UC3);
@@ -83,7 +84,7 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
   {
     activeKeyFrame->setDepth(currentDepthMap);
     float scale = activeKeyFrame->getScaledCamToWorld().scale();
-    cv::Mat* depthGt = activeKeyFrame->depthMat();
+    cv::Mat* depthGt = activeKeyFrame->depthGTMat();
     //depthGt->convertTo(*depthGt, CV_16U, 5000); This was not needed inside pure LSD SLAM
     cv::Mat* rgb = activeKeyFrame->rgbMat();
 
@@ -149,58 +150,103 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
     /** Store the currentDepthMap propagated inside otherDepthMap **/
     memcpy(otherDepthMap,currentDepthMap,width*height*sizeof(DepthMapPixelHypothesis));
 
-    /** Create a float array of idepth and idepth variance **/
-    std::vector<float> idepth(width*height, 0.0);
-    std::vector<float> idepthVar(width*height, 0.0);
-    //float idepthVar[width*height];
-    fillIdepthArray(idepth.data(), idepthVar.data());
+    if (depthCompletion)
+    {
+      /* Use the depth completion network to update depths */
 
-    /** Get the depth prediction from network **/
-    //** Call Depth Node **//
-    ROS_WARN("Predicting depth using network");
-    reinforced_visual_slam::DepthFusion srv;
-    srv.request.rgb_image = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(activeKeyFrame->rgbMat()) ).toImageMsg());
-    srv.request.idepth = idepth;
-    srv.request.idepth_var = idepthVar;
-    srv.request.scale = prev_scale;
-    if(depthClient.call(srv)){
-      ROS_INFO("Depth prediction received");
+      /** Create a float array of idepth and idepth variance **/
+      std::vector<float> idepth(width*height, 0.0);
+      std::vector<float> idepthVar(width*height, 0.0);
+      //float idepthVar[width*height];
+      fillIdepthArray(idepth.data(), idepthVar.data());
 
-      //** convert srv.response.predicted_depth to cv mat **//
-      cv_bridge::CvImagePtr cvImage, cvResidue;
-      try
-      {
-        cvImage = cv_bridge::toCvCopy(srv.response.depthmap, "");
-        cvResidue = cv_bridge::toCvCopy(srv.response.residual, "");
-      }
-      catch (cv_bridge::Exception& e)
-      {
-        ROS_ERROR("cv_bridge exception: %s", e.what());
-        return;
-      }
-      cv::Mat predicted_idepth;
+      /** Get the depth prediction from network **/
+      //** Call Depth Node **//
+      ROS_WARN("Predicting depth using depthCompletion network");
+      reinforced_visual_slam::DepthFusion srv;
+      srv.request.rgb_image = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(activeKeyFrame->rgbMat()) ).toImageMsg());
+      srv.request.idepth = idepth;
+      srv.request.idepth_var = idepthVar;
+      srv.request.scale = prev_scale;
+      if(depthClient.call(srv)){
+        ROS_INFO("Depth prediction received");
 
-      // Network returns predicted idepth of 320x240. Resize it to 640x480
-      cv::resize(cvImage->image, predicted_idepth, cv::Size(width, height));
+        //** convert srv.response.predicted_depth to cv mat **//
+        cv_bridge::CvImagePtr cvImage, cvResidue;
+        try
+        {
+          cvImage = cv_bridge::toCvCopy(srv.response.depthmap, "");
+          cvResidue = cv_bridge::toCvCopy(srv.response.residual, "");
+        }
+        catch (cv_bridge::Exception& e)
+        {
+          ROS_ERROR("cv_bridge exception: %s", e.what());
+          return;
+        }
+        cv::Mat predicted_idepth;
+
+        // Network returns predicted idepth of 320x240. Resize it to 640x480
+        cv::resize(cvImage->image, predicted_idepth, cv::Size(width, height));
+        
+        //** Update currentDepthMap using the predicted depthmap (Todo) **//
+        // Convert the scale of fused_depth back to original (m)
+        cv::Mat fused_depth(cv::Size(width, height), CV_32FC1, float(0));
+        if(readSparse)
+          setFromIdepthMapSparse(reinterpret_cast<float*>(predicted_idepth.data), 
+            reinterpret_cast<float*>(fused_depth.data), prev_scale);
+        else
+          setFromIdepthMap(reinterpret_cast<float*>(predicted_idepth.data), 
+            reinterpret_cast<float*>(fused_depth.data), prev_scale);
+        // Todo: New setFromIdepthMap using the residual!!
       
-      //** Update currentDepthMap using the predicted depthmap (Todo) **//
-      // Convert the scale of fused_depth back to original (m)
-      cv::Mat fused_depth(cv::Size(width, height), CV_32FC1, float(0));
-      if(readSparse)
-        setFromIdepthMapSparse(reinterpret_cast<float*>(predicted_idepth.data), 
-          reinterpret_cast<float*>(fused_depth.data), prev_scale);
+        /** Save fused depth it inside frame **/
+        if(!useGtDepth)
+          activeKeyFrame->setCVDepth(fused_depth);
+      }
       else
-        setFromIdepthMap(reinterpret_cast<float*>(predicted_idepth.data), 
-          reinterpret_cast<float*>(fused_depth.data), prev_scale);
-      // Todo: New setFromIdepthMap using the residual!!
-
-      /** Save fused depth it inside frame **/
-      if(!useGtDepth)
-        activeKeyFrame->setCVDepth(fused_depth);
-
+        ROS_ERROR("No response from depth predictor node!!");
     }
     else
-      ROS_ERROR("No response from depth predictor node!!");
+    {
+      /** Get the depth prediction from single image network **/
+      //** Call Depth Node **//
+      ROS_WARN("Predicting depth using network");
+      reinforced_visual_slam::PredictDepthmap srv;
+      srv.request.rgb_image = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(activeKeyFrame->rgbMat()) ).toImageMsg());
+      if(singleImageDepthClient.call(srv)){
+        ROS_INFO("Depth prediction received");
+
+        //** convert srv.response.predicted_depth to cv mat **//
+        cv_bridge::CvImagePtr cvImage;
+        try
+        {
+          cvImage = cv_bridge::toCvCopy(srv.response.depthmap, "");
+        }
+        catch (cv_bridge::Exception& e)
+        {
+          ROS_ERROR("cv_bridge exception: %s", e.what());
+          return;
+        }
+        cv::Mat predicted_idepth;
+        // If Network returns predicted idepth of 320x240, uncomment below to resize it to 640x480
+        //cv::resize(cvImage->image, predicted_idepth, cv::Size(width, height));
+        
+        // Multiplying the predicted idepth by the previous depthmap's scale. LSD SLAM assumes idepth to be at this scale!
+        predicted_idepth = cvImage->image * prev_scale;
+
+        /** Fuse predicted and projected (*otherDepthMap) idepths to make combined depthmap **/
+        // Mat to store combined (predicted + projected) depth
+        cv::Mat combined_depth(cv::Size(width, height), CV_32FC1, float(0));
+        fuseDepthMapsManual(reinterpret_cast<float*>(predicted_idepth.data), reinterpret_cast<float*>(combined_depth.data));
+
+        //** Sparsify combined depth and update currentDepthMap (Todo) **//
+        //new_keyframe->setDepthFromGroundTruth(reinterpret_cast<float*>(combined_depth.data));
+
+        /** Convert the scale of combined_depth back to original (m) and save it inside frame **/
+        combined_depth *= prev_scale;
+        if(!useGtDepth)
+          activeKeyFrame->setCVDepth(combined_depth);
+      }
 
     if (printDepthPredictionDebugs)
     {
@@ -223,7 +269,7 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
       **/
     }
   }
-
+}
   // make mean inverse depth be one.
   float sumIdepth=0, numIdepth=0;
   for(DepthMapPixelHypothesis* source = currentDepthMap; source < currentDepthMap+width*height; source++)
@@ -260,7 +306,7 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
     }
 
     /** Converting the scale of depth gt for plotting **/
-    cv::Mat depth_gt = activeKeyFrame->depthMat()->clone();
+    cv::Mat depth_gt = activeKeyFrame->depthGTMat()->clone();
     depth_gt *= float(1/(rescaleFactor * prev_scale));
     if(plotDepthFusion)
     {
@@ -296,7 +342,7 @@ void DepthMapPredictor::fuseDepthMapsManual(const float* idepth_predicted, float
   This function updates the idepth and variance of currentDepthMap based on otherDepthMap.
   Also, it computes a new float* depth_combined.
   **/
-  const float idepth_var_predicted = VAR_GT_INIT_INITIAL;
+  const float idepth_var_predicted = depthPredictionVariance;
 
   for(int y=0;y<height;y++)
   {

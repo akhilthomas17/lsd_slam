@@ -109,6 +109,9 @@ void dynConfCb(lsd_slam_core::LSDParamsConfig &config, uint32_t level)
 	optimizeDeepTAM = config.optimizeDeepTAM;
 	readSparse = config.readSparse;
 	writeDepthToFile = config.writeDepthToFile;
+	depthCompletion = config.depthCompletion;
+	testMode = config.testMode;
+	depthPredictionVariance = config.depthPredictionVariance;
 }
 
 }
