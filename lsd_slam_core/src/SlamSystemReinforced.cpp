@@ -78,7 +78,7 @@ void SlamSystemReinforced::gtDepthInit(cv::Mat& rgb, cv::Mat& depth, double time
 	if (gtBootstrap)
 	{
 		// Adding CV Mat rgb and GT depth image pointers to the current KeyFrame
-		currentKeyFrame->setCVImages(rgb.clone(), depth.clone());
+		currentKeyFrame->setCVImages(rgb.clone(), gtDepth.clone());
 	}
 	else
 	{	
@@ -268,16 +268,15 @@ void SlamSystemReinforced::trackFrame(cv::Mat& rgb, cv::Mat& depthGt, unsigned i
 	double angle = 2 * acos (newRefToFrame_poseUpdate.unit_quaternion().w()) * 180.0 / PI;
 	//float angle;
 	//newRefToFrame_poseUpdate.so3().logAndTheta(*this, angle);// 180.0 / PI;
-	printf("distSquare: %f\n",distSquare );
-	printf("angle: %f\n",angle );
 
 	if ((distSquare > maxDist*maxDist) || (angle > maxAngle))
 	{
 		createNewKeyFrame = true;
 		_frameToReference_initialEstimate = SE3();
 		printf("New keyframe to be created \n");
+		printf("distSquare: %f\n",distSquare );
+		printf("angle: %f\n",angle );
 	}
-
 
 	unmappedTrackedFramesMutex.lock();
 	if(unmappedTrackedFrames.size() < 50 || (unmappedTrackedFrames.size() < 100 && trackingNewFrame->getTrackingParent()->numMappedOnThisTotal < 10))
@@ -289,7 +288,7 @@ void SlamSystemReinforced::trackFrame(cv::Mat& rgb, cv::Mat& depthGt, unsigned i
 	if(blockUntilMapped)
 	{
 		boost::unique_lock<boost::mutex> lock(newFrameMappedMutex);
-		while(unmappedTrackedFrames.size() > 0)
+		while((unmappedTrackedFrames.size() > 0 ))
 		{
 			printf("TRACKING IS BLOCKING, waiting for %d frames to finish mapping.\n", (int)unmappedTrackedFrames.size());
 			newFrameMappedSignal.wait(lock);

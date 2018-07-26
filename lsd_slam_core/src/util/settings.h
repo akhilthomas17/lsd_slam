@@ -266,6 +266,8 @@ extern bool manualTrackingLossIndicated;
  extern bool writeDepthToFile;
  extern bool depthCompletion;
  extern bool testMode;
+ extern bool exitSystem;
+ extern bool writeTestDepths;
 
  extern std::string outputFolder;
  extern int iterNum;

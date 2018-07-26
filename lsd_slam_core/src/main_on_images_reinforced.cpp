@@ -31,6 +31,7 @@
 #include <algorithm>
 
 #include "IOWrapper/ROS/ROSOutput3DWrapper.h"
+#include "IOWrapper/ROS/ROSOutputSaver.h"
 #include "IOWrapper/ROS/rosReconfigure.h"
 
 #include "util/Undistorter.h"
@@ -182,7 +183,8 @@ int getFileRgbdTUM (std::string rgb_path, std::vector<std::string> &rgb_files, s
     return (int) rgb_files.size();
 }
 
-int getComboFileRgbdTUM (std::string source, std::vector<std::string> &rgb_files, std::vector<std::string> &depth_files, std::vector<double> &timestamps)
+int getComboFileRgbdTUM (std::string source, std::vector<std::string> &rgb_files, 
+	std::vector<std::string> &depth_files, std::vector<double> &timestamps, std::string basename, bool basename_received)
 {
     std::vector < std::vector<std::string>* > files;
     files.push_back(&rgb_files);
@@ -196,7 +198,6 @@ int getComboFileRgbdTUM (std::string source, std::vector<std::string> &rgb_files
 
             std::getline(f, l);
 
-            //l = trim(l);
 
             if (l == "" || l[0] == '#')
                 continue;
@@ -211,13 +212,20 @@ int getComboFileRgbdTUM (std::string source, std::vector<std::string> &rgb_files
         }
 
         f.close();
-
-        size_t sp = source.find_last_of('/');
         std::string prefix;
-        if (sp == std::string::npos)
-            prefix = "";
+
+        if(basename_received)
+        {
+        	prefix = basename;
+        }
         else
-            prefix = source.substr(0, sp);
+        {
+        	size_t sp = source.find_last_of('/');
+	        if (sp == std::string::npos)
+	            prefix = "";
+	        else
+	            prefix = source.substr(0, sp);
+        }
 
         for (int ii = 0; ii < 2; ii++)
         {
@@ -282,6 +290,45 @@ int main( int argc, char** argv )
 	Sophus::Matrix3f K;
 	K << fx, 0.0, cx, 0.0, fy, cy, 0.0, 0.0, 1.0;
 
+	// open dataset sequence file (Assumed to be in RGBD sequence format)
+	std::string source, basename;
+	bool basename_received = false;
+	std::vector<std::string> rgb_files, depth_files;
+	// For reading timestamps from file
+	std::vector<double> timestamps;
+
+	bool waitOnStart = false;
+
+	if(ros::param::get("~waitOnStart", waitOnStart))
+	{
+		printf("Wait on start: %d \n", waitOnStart);
+	}
+	ros::param::del("~waitOnStart");
+
+	if(!ros::param::get("~files", source))
+	{
+		printf("need source rgb_files! (set using _files:=FOLDER)\n");
+		exit(0);
+	}
+	ros::param::del("~files");
+
+	if(ros::param::get("~basename", basename))
+	{
+		basename_received = true;
+		printf("Basename provided. Taking downloaded files from %s \n", basename);
+	}
+	ros::param::del("~basename");
+
+	if(ros::param::get("~writeTestDepths", writeTestDepths))
+	{
+		printf("writeTestDepths: %d \n", writeTestDepths);
+	}
+	ros::param::del("~writeTestDepths");
+
+	if(ros::param::get("~outputFolder", outputFolder))
+		printf("Received outputFolder\n");
+	ros::param::del("~outputFolder");
+
 
 	// make output wrapper. just set to zero if no output is required.
 
@@ -297,29 +344,8 @@ int main( int argc, char** argv )
 	SlamSystemReinforced* system = new SlamSystemReinforced(w, h, K, doSlam);
 	system->setVisualization(outputWrapper);
 
-
-
-	// open image rgb_files: first try to open as file.
-	std::string source;
-	std::vector<std::string> rgb_files, depth_files;
-	// For reading timestamps from file
-	std::vector<double> timestamps;
-
-	if(!ros::param::get("~files", source))
-	{
-		printf("need source rgb_files! (set using _files:=FOLDER)\n");
-		exit(0);
-	}
-	ros::param::del("~files");
-
-	/*
-	if(getdir(source, rgb_files) >= 0)
-	{
-		printf("found %d image rgb_files in folder %s!\n", (int)rgb_files.size(), source.c_str());
-	}
-	else 
-	*/
-	if(getComboFileRgbdTUM(source, rgb_files, depth_files, timestamps) >= 0)
+	
+	if(getComboFileRgbdTUM(source, rgb_files, depth_files, timestamps, basename, basename_received) >= 0)
 	{
 		printf("found %d rgb and depth files from file %s!\n", (int)rgb_files.size(), source.c_str());
 	}
@@ -350,6 +376,7 @@ int main( int argc, char** argv )
 	ROS_WARN("readSparse: %d", readSparse);
 	ROS_WARN("depthCompletion: %d", depthCompletion);
 	ROS_WARN("testMode: %d", testMode);
+	ROS_WARN("outputFolder: %s", outputFolder.c_str());
 	
 
 	cv::Mat image = cv::Mat(h,w,CV_8U);
@@ -384,12 +411,11 @@ int main( int argc, char** argv )
         depthImg.convertTo(depthImg, CV_32F, 0.0002);
 
 		if(runningIDX == 0){
-			//system->randomInit(image.data, fakeTimeStamp, runningIDX);
-            //cv::imshow("depth 0", depthImg);
-            //cv::imshow("depth1", depthImg);
-            //cv::waitKey(0);
-            std::cout << "Press ENTER to continue...";
-            std::cin.ignore( std::numeric_limits<std::streamsize>::max(), '\n' );
+            if(waitOnStart)
+            {
+            	std::cout << "Press ENTER to continue...";
+            	std::cin.ignore( std::numeric_limits<std::streamsize>::max(), '\n' );
+            }
             cv::Mat depthImage(cv::Size(w, h), CV_32FC1);
             bool success = true;
             if(!gtBootstrap)
@@ -397,10 +423,7 @@ int main( int argc, char** argv )
             else
             	depthImage = depthImg;
             if (success){
-            	if(testMode)
-            		system->gtDepthInit(image, depthImage, fakeTimeStamp, runningIDX, depthImg);
-            	else
-            		system->gtDepthInit(image, depthImage, fakeTimeStamp, runningIDX);
+            	system->gtDepthInit(image, depthImage, fakeTimeStamp, runningIDX, depthImg);
             }
             else
             	system->randomInit(image.data, fakeTimeStamp, runningIDX);
@@ -408,6 +431,8 @@ int main( int argc, char** argv )
         } else{
         	system->trackFrame(image, depthImg, runningIDX, hz == 0, fakeTimeStamp);
         }
+        if(exitSystem)
+        	break;
 		runningIDX++;
 
 		if(hz != 0)
@@ -435,7 +460,7 @@ int main( int argc, char** argv )
 
 
 	system->finalize();
-	system->savePosesTofile("lsd_slam_poses.txt");
+	system->savePosesTofile("final_trajectory.txt");
 
 
 

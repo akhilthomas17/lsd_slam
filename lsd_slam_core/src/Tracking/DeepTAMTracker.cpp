@@ -46,7 +46,7 @@ SE3 DeepTAMTracker::trackFrameDeepTAM(TrackingReference* reference, Frame* frame
     reinforced_visual_slam::TrackImage srv;
     float current_scale = reference->keyframe->pose->getCamToWorld().scale();
     if (debug){
-        ROS_INFO("Type of Depth Image LSD SLAM: %d", reference->keyframe->depthMat()->type());
+        ROS_INFO("Type of Depth Image LSD SLAM: %d", reference->keyframe->depthGTMat()->type());
         ROS_INFO("Type of RGB Image LSD SLAM: %d", reference->keyframe->rgbMat()->type());
         ROS_INFO("Type of RGB current Image LSD SLAM: %d", frame->rgbMat()->type());
         ROS_INFO("Scale of initial estimate guess: %f", current_scale);

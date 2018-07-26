@@ -1712,10 +1712,10 @@ std::vector<FramePoseStruct*, Eigen::aligned_allocator<FramePoseStruct*> > SlamS
 }
 
 void SlamSystem::savePosesTofile(const std::string& filename){
-	printf("Writing poses to %s\n", filename.c_str());
+	printf("Writing poses to %s\n", (outputFolder+"/"+filename).c_str());
 	
 	std::ofstream f;
-	f.open(filename.c_str(), std::ios::out);
+	f.open((outputFolder+"/"+filename).c_str(), std::ios::out);
 	f << std::fixed;
 	
 	auto poses = keyFrameGraph->allFramePoses;
@@ -1735,7 +1735,7 @@ void SlamSystem::savePosesTofile(const std::string& filename){
 
 			f << timestamp;
             f << " " << trans[0] << " " << trans[1] << " " << trans[2];
-            f << " " << quat.x() << quat.y() << quat.z() << quat.w();
+            f << " " << quat.x() << " " << quat.y() << " " << quat.z() << " " << quat.w();
             /*
 			for (int i = 0; i < 7; ++i){
 				f << " " << *(camToWorld + i);

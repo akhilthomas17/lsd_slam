@@ -200,8 +200,7 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
         // Todo: New setFromIdepthMap using the residual!!
       
         /** Save fused depth it inside frame **/
-        if(!useGtDepth)
-          activeKeyFrame->setCVDepth(fused_depth);
+        activeKeyFrame->setCVDepth(fused_depth);
       }
       else
         ROS_ERROR("No response from depth predictor node!!");
@@ -244,8 +243,7 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
 
         /** Convert the scale of combined_depth back to original (m) and save it inside frame **/
         combined_depth *= prev_scale;
-        if(!useGtDepth)
-          activeKeyFrame->setCVDepth(combined_depth);
+        activeKeyFrame->setCVDepth(combined_depth);
       }
 
     if (printDepthPredictionDebugs)
@@ -290,10 +288,16 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
     source->idepth_var *= rescaleFactor2;
     source->idepth_var_smoothed *= rescaleFactor2;
   }
+  if (isnanf(rescaleFactor) || rescaleFactor < 0)
+      {
+        exitSystem = true;
+        printf("Depth map rescaleFactor has become unacceptable. shutting down SLAM system\n");
+        return;
+      }
   activeKeyFrame->pose->thisToParent_raw = sim3FromSE3(oldToNew_SE3.inverse(), rescaleFactor);
   activeKeyFrame->pose->invalidateCache();
 
-  if(predictDepth){
+  if(predictDepth && plotDepthFusion){
     /** Update the same scale to the propagated idepth for debug plots **/
     for(DepthMapPixelHypothesis* source = otherDepthMap; source < otherDepthMap+width*height; source++)
     {
@@ -308,15 +312,12 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
     /** Converting the scale of depth gt for plotting **/
     cv::Mat depth_gt = activeKeyFrame->depthGTMat()->clone();
     depth_gt *= float(1/(rescaleFactor * prev_scale));
-    if(plotDepthFusion)
-    {
-      debugPlotsDepthFusion(reinterpret_cast<float*>(depth_gt.data));
-      //Util::displayImage( "iDEPTH Propagated", debugIdepthPropagated, true );
-      Util::displayImage( "iDEPTH Combined", debugIdepthFused, true );
-      Util::displayImage( "iDEPTH GT", debugIdepthGt, true );
+    debugPlotsDepthFusion(reinterpret_cast<float*>(depth_gt.data));
+    //Util::displayImage( "iDEPTH Propagated", debugIdepthPropagated, true );
+    Util::displayImage( "iDEPTH Combined", debugIdepthFused, true );
+    Util::displayImage( "iDEPTH GT", debugIdepthGt, true );
 
-      int waikey = Util::waitKey(0);
-    }
+    int waikey = Util::waitKey(0);
   }
 
 

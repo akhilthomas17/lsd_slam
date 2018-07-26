@@ -56,11 +56,11 @@ public:
 	{
 	    data.rgbImage = imgRGB;
 	    data.gtDepth = imgGT;
-	    cvImagesSet_ = true;
 	}
 	void setCVDepth(cv::Mat imgDepth)
 	{
 		data.depthImage = imgDepth;
+		cvImagesSet_ = true;
 	}
 	void setCVRGB(cv::Mat imgRGB)
 	{
