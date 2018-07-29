@@ -52,13 +52,13 @@ void ROSOutputSaver::publishKeyframe(Frame* f)
 
 		float scale = f->getScaledCamToWorld().scale();
 		cv::Mat depthGt = f->depthGTMat()->clone();
-		cv::Mat* depthPrediction;
+		cv::Mat depthPrediction;
 		cv::Mat* rgb;
 		if (testMode)
 		{
 			if (predictDepth){
-				depthPrediction = f->depthMat();
-				depthPrediction->convertTo(*depthPrediction, CV_16U, 5000);
+				depthPrediction = f->depthMat()->clone();
+				depthPrediction.convertTo(depthPrediction, CV_16U, 5000);
 			}
 			depthGt.convertTo(depthGt, CV_16U, 5000); // This was not needed inside pure LSD SLAM
 		}
@@ -113,7 +113,7 @@ void ROSOutputSaver::publishKeyframe(Frame* f)
 		cv::minMaxLoc(depthGt, &min, &max);
 
 		if(testMode && predictDepth)
-			cv::imwrite(baseName + "_depthPrediction.png", *depthPrediction);
+			cv::imwrite(baseName + "_depthPrediction.png", depthPrediction);
 		else if (!testMode)
 			cv::imwrite(baseName + "_rgb.png", *rgb);
 		cv::imwrite(baseName + "_depthGT.png", depthGt);

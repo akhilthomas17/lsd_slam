@@ -46,6 +46,13 @@ SlamSystemReinforced::SlamSystemReinforced(int w, int h, Eigen::Matrix3f K, bool
     //thread_mapping = boost::thread(&SlamSystemReinforced::mappingThreadLoop, this);
     printf("Started SlamSystemReinforced\n");
 
+    if(!(useGtDepth||gtBootstrap)){
+    	while(!ros::service::exists("predict_depthmap", false)){
+        sleep(2);
+        printf("Waiting for single image predictor to start..\n");
+    }
+
+
     /*
     printf("Waiting for handshake to complete\n");
     while(!(tracker->shakeHands())){
@@ -53,11 +60,12 @@ SlamSystemReinforced::SlamSystemReinforced(int w, int h, Eigen::Matrix3f K, bool
     }
     printf("Handshake completed\n");
     //*/
+    }
 
 }
 
 
-void SlamSystemReinforced::gtDepthInit(cv::Mat& rgb, cv::Mat& depth, double timeStamp, int id, cv::Mat gtDepth)
+void SlamSystemReinforced::gtDepthInit(cv::Mat& rgb, cv::Mat& gtDepth, double timeStamp, int id)
 {
     printf("Doing GT initialization!\n");
 
@@ -74,21 +82,9 @@ void SlamSystemReinforced::gtDepthInit(cv::Mat& rgb, cv::Mat& depth, double time
 	currentKeyFrameMutex.lock();
 
 	currentKeyFrame.reset(new Frame(id, width, height, K, timeStamp, grayImg.data));
-	float cov_scale = 1;
-	if (gtBootstrap)
-	{
-		// Adding CV Mat rgb and GT depth image pointers to the current KeyFrame
-		currentKeyFrame->setCVImages(rgb.clone(), gtDepth.clone());
-	}
-	else
-	{	
-		if (testMode)
-			currentKeyFrame->setCVGT(gtDepth.clone());
-		currentKeyFrame->setCVRGB(rgb.clone());
-		currentKeyFrame->setCVDepth(depth.clone());
-		cov_scale = depthPredictionVariance/VAR_GT_INIT_INITIAL;
-	}
-	currentKeyFrame->setDepthFromGroundTruth(reinterpret_cast<float*>(depth.data), cov_scale);
+	// Adding CV Mat rgb and GT depth image pointers to the current KeyFrame
+	currentKeyFrame->setCVImages(rgb.clone(), gtDepth.clone());
+	currentKeyFrame->setDepthFromGroundTruth(reinterpret_cast<float*>(gtDepth.data));
 
 	map->initializeFromGTDepth(currentKeyFrame.get());
 	keyFrameGraph->addFrame(currentKeyFrame.get());
@@ -106,10 +102,10 @@ void SlamSystemReinforced::gtDepthInit(cv::Mat& rgb, cv::Mat& depth, double time
 	printf("Done GT initialization!\n");
 }
 
-bool SlamSystemReinforced::getDepthPrediction(const cv::Mat& rgb, cv::Mat& predicted_depth)
-{
+bool SlamSystemReinforced::initFromPrediction(cv::Mat& rgb, cv::Mat& gtDepth, double timeStamp, int id){
 	ros::NodeHandle nh;
     ros::ServiceClient depthClient = nh.serviceClient<reinforced_visual_slam::PredictDepthmap>("predict_depthmap");
+	
 	/** Get the depth prediction from network **/
     //** Call Depth Node **//
     ROS_WARN("Predicting depth using network");
@@ -119,53 +115,75 @@ bool SlamSystemReinforced::getDepthPrediction(const cv::Mat& rgb, cv::Mat& predi
     {
 		ROS_INFO("Depth prediction received");
 
-		//** convert srv.response.predicted_depth to cv mat **//
+		//** convert srv.response.depthmap to cv mat **//
 		cv_bridge::CvImagePtr cvImage;
 		try
 		{
-		cvImage = cv_bridge::toCvCopy(srv.response.depthmap, "");
+			cvImage = cv_bridge::toCvCopy(srv.response.depthmap, "");
 		}
 		catch (cv_bridge::Exception& e)
 		{
-		ROS_ERROR("cv_bridge exception: %s", e.what());
-		return false;
+			ROS_ERROR("cv_bridge exception: %s", e.what());
+			return false;
 		}
 
-		//cv::Mat depthImage = 1.0/cvImage->image;
-		predicted_depth = 1.0/cvImage->image;
+		cv::Mat predicted_depth = 1.0/cvImage->image;
+		cv::Mat grayImg;
+		if (rgb.channels() > 1)
+    		cvtColor(rgb, grayImg, CV_RGB2GRAY);
+    	else
+    		grayImg = rgb;
 
-		//** convert idepth to depth **//
+		currentKeyFrameMutex.lock();
 
-		/*
-		float* depth_predicted = reinterpret_cast<float*>(depthImage.data);
-		float* idepth_predicted = const reinterpret_cast<float*>(cvImage->image.data);
-
+		currentKeyFrame.reset(new Frame(id, width, height, K, timeStamp, grayImg.data));
+		if (testMode)
+			currentKeyFrame->setCVGT(gtDepth.clone());
+		currentKeyFrame->setCVRGB(rgb.clone());
+		currentKeyFrame->setCVDepth(predicted_depth.clone());
 		
-		for(int y=0;y<240;y++)
-		{
-			for(int x=0;x<320;x++)
-			{
-				if(!isnanf(idepth_predicted[x+y*width]) && idepth_predicted[x+y*width] > 0)
-					depth_predicted[x+y*width] = 1.0 / idepth_predicted[x+y*width];
-			}
+		/** If initial variance guess is provided, initialize from it. Else, init from the residual! **/
+		if(depthPredictionVariance > 0){
+			float cov_scale = 1;
+			cov_scale = depthPredictionVariance/VAR_GT_INIT_INITIAL;
+			currentKeyFrame->setDepthFromGroundTruth(reinterpret_cast<float*>(predicted_depth.data), cov_scale);
 		}
-		*/
+		else{
+			//** convert srv.response.residual to cv mat **//
+			cv_bridge::CvImagePtr resImage;
+			try
+			{
+				cvImage = cv_bridge::toCvCopy(srv.response.residual, "");
+			}
+			catch (cv_bridge::Exception& e)
+			{
+				ROS_ERROR("cv_bridge exception: %s", e.what());
+				return false;
+			}
+			cv::Mat predicted_residual = resImage->image;
+			currentKeyFrame->setDepthFromPrediction(reinterpret_cast<float*>(predicted_depth.data),
+				reinterpret_cast<float*>(predicted_residual.data));
+		}
 
-		// Network returns predicted idepth of 320x240. Resize it to 640x480
-		//cv::resize(depthImage, predicted_depth, predicted_depth.size());
-		//depthImage.release();
+		map->initializeFromGTDepth(currentKeyFrame.get());
+		keyFrameGraph->addFrame(currentKeyFrame.get());
 
-		//cv::imshow("predicted_depth", rgb);
-		//cv::waitKey(0);
+		currentKeyFrameMutex.unlock();
+
+		if(doSlam)
+		{
+			keyFrameGraph->idToKeyFrameMutex.lock();
+			keyFrameGraph->idToKeyFrame.insert(std::make_pair(currentKeyFrame->id(), currentKeyFrame));
+			keyFrameGraph->idToKeyFrameMutex.unlock();
+		}
+		if(continuousPCOutput && outputWrapper != 0) 
+			outputWrapper->publishKeyframe(currentKeyFrame.get());
 
 		return true;
 	}
 	else
-	{
 		return false;
-	}
 }
-
 
 void SlamSystemReinforced::trackFrame(cv::Mat& rgb, cv::Mat& depthGt, unsigned int frameID, bool blockUntilMapped, 
 	double timestamp)
@@ -297,18 +315,19 @@ void SlamSystemReinforced::trackFrame(cv::Mat& rgb, cv::Mat& depthGt, unsigned i
 	}
 }
 
-void SlamSystemReinforced::trackFrameLSD(cv::Mat* rgb, cv::Mat* depth, unsigned int frameID, bool blockUntilMapped, double timestamp)
+void SlamSystemReinforced::trackFrameLSD(cv::Mat& rgb, cv::Mat& depthGt, unsigned int frameID, bool blockUntilMapped, double timestamp)
 {	
 	cv::Mat grayImg;
 
-	if (rgb->channels() > 1)
-		cvtColor(*rgb, grayImg, CV_RGB2GRAY);
+	if (rgb.channels() > 1)
+		cvtColor(rgb, grayImg, CV_RGB2GRAY);
 	else
-		grayImg = *rgb;
+		grayImg = rgb;
 
 	// Create new frame
 	std::shared_ptr<Frame> trackingNewFrame(new Frame(frameID, width, height, K, timestamp, grayImg.data));
-	trackingNewFrame->setCVImages(rgb->clone(), depth->clone());
+	if(testMode)
+		trackingNewFrame->setCVImages(rgb.clone(), depthGt.clone());
 
 	if(!trackingIsGood)
 	{

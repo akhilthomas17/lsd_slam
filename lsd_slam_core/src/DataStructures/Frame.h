@@ -80,6 +80,9 @@ public:
 	
 	/** Sets ground truth depth (real, not inverse!) from a float array on level zero. Invalidates higher levels. */
 	void setDepthFromGroundTruth(const float* depth, float cov_scale = 1.0f);
+
+	/** Sets depth from prediction (real, not inverse!) from a float array on level zero. Invalidates higher levels. */
+	void setDepthFromPrediction(const float* depth, const float* residual);
 	
 	/** Prepares this frame for stereo comparisons with the other frame (computes some intermediate values that will be needed) */
 	void prepareForStereoWith(Frame* other, Sim3 thisToOther, const Eigen::Matrix3f& K, const int level);

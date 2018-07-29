@@ -133,7 +133,10 @@ void ROSOutput3DWrapper::publishKeyframe(Frame* f)
 	kfMsg.height = h;
 
 	kfMsg.rgb = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(f->rgbMat()) ).toImageMsg());
-	kfMsg.depth = *(cv_bridge::CvImage( std_msgs::Header(),"32FC1",*(f->depthGTMat()) ).toImageMsg());
+	if (predictDepth)
+		kfMsg.depth = *(cv_bridge::CvImage( std_msgs::Header(),"32FC1",*(f->depthMat()) ).toImageMsg());
+	else if (!useGtDepth)
+		kfMsg.depth = *(cv_bridge::CvImage( std_msgs::Header(),"32FC1",*(f->depthGTMat()) ).toImageMsg());
 	siasa_publisher.publish(kfMsg);
 
 }

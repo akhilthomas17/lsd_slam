@@ -276,7 +276,7 @@ int main( int argc, char** argv )
         } 
         else
         {
-			system->trackFrameLSD(&imageRgb, &depthImg, runningIDX, hz == 0, fakeTimeStamp);
+			system->trackFrameLSD(imageRgb, depthImg, runningIDX, hz == 0, fakeTimeStamp);
         }
 
 		if(_debug)

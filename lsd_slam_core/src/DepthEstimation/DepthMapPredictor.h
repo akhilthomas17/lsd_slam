@@ -25,9 +25,9 @@ namespace lsd_slam
     DepthMapPredictor(int w, int h, const Eigen::Matrix3f& K);
     void createKeyFrame(Frame* new_keyframe);
   private:
-    void setFromIdepthMap(const float* idepth_predicted, float* depth_fused, float scale);
+    void setFromIdepthMap(const float* idepth_predicted, float* depth_fused, float scale, const float* idepth_variance);
     void setFromIdepthMapSparse(const float* idepth_predicted, float* depth_fused, float scale);
-    void fuseDepthMapsManual(const float* idepth_predicted, float* idepth_combined);
+    void fuseDepthMapsManual(const float* idepth_predicted, float* idepth_combined, const float* idepth_variance);
     void debugPlotsDepthFusion(const float* depth_gt);
     void fillIdepthArray(float* idepth, float* idepthVar);
     ros::NodeHandle nh;

@@ -329,6 +329,13 @@ int main( int argc, char** argv )
 		printf("Received outputFolder\n");
 	ros::param::del("~outputFolder");
 
+	if( ros::param::get("~showDebugWindow", displayDepthMap))
+		printf("Received debug depth map\n");
+	ros::param::del("~showDepthWindow");
+
+	if (!ros::param::get("~depthPredictionVariance", depthPredictionVariance))
+		depthPredictionVariance = -1.0f;
+	ros::param::del("~depthPredictionVariance");
 
 	// make output wrapper. just set to zero if no output is required.
 
@@ -413,26 +420,32 @@ int main( int argc, char** argv )
 		if(runningIDX == 0){
             if(waitOnStart)
             {
-            	std::cout << "Press ENTER to continue...";
+            	printf("Press ENTER to continue...\n");
             	std::cin.ignore( std::numeric_limits<std::streamsize>::max(), '\n' );
             }
-            cv::Mat depthImage(cv::Size(w, h), CV_32FC1);
-            bool success = true;
-            if(!gtBootstrap)
-            	success = system->getDepthPrediction(image, depthImage);
-            else
-            	depthImage = depthImg;
-            if (success){
-            	system->gtDepthInit(image, depthImage, fakeTimeStamp, runningIDX, depthImg);
+            if(gtBootstrap || useGtDepth)
+            	system->gtDepthInit(image, depthImg, fakeTimeStamp, runningIDX);
+            else if (predictDepth){
+            	if(!system->initFromPrediction(image, depthImg, fakeTimeStamp, runningIDX))
+            	{
+            		ROS_ERROR("Cannot init from single image depth predictor. Please check if the script is running. Terminating the program!!");
+            		break;
+            	}
             }
             else
             	system->randomInit(image.data, fakeTimeStamp, runningIDX);
-            
-        } else{
-        	system->trackFrame(image, depthImg, runningIDX, hz == 0, fakeTimeStamp);
+        } 
+        else
+        {
+        	if(useGtDepth || predictDepth)
+        		system->trackFrame(image, depthImg, runningIDX, hz == 0, fakeTimeStamp);
+        	else
+        		system->trackFrameLSD(image, depthImg, runningIDX, hz == 0, fakeTimeStamp);
         }
-        if(exitSystem)
+        if(exitSystem){
+        	ROS_ERROR("System encountered failure, Terminating the program!!");
         	break;
+        }
 		runningIDX++;
 
 		if(hz != 0)
