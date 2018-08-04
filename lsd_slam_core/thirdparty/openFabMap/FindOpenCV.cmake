@@ -64,14 +64,19 @@ IF(WIN32)
 	endif( OPENCV2_PATH )
 
 ELSE(WIN32) # Linux
-	FIND_PATH( OPENCV2_INCLUDE_PATH opencv.hpp
+	#FIND_PATH( OPENCV2_INCLUDE_PATH opencv.hpp
 	# installation selected by user
-	$ENV{OPENCV_HOME}/include
+	#$ENV{OPENCV_HOME}/include
 	# system placed in /usr/local/include
-	/usr/local/include/opencv2
+	#/usr/local/include/opencv2
 	# system placed in /usr/include
-	/usr/include/opencv2
+	#/usr/include/opencv2
+	#)
+
+	FIND_PATH( OPENCV2_INCLUDE_PATH opencv.hpp
+		/misc/software/opencv/opencv-3.2.0_cuda8_with_contrib-x86_64-gcc5.4.0/include/opencv2
 	)
+
 	
 	if( OPENCV2_INCLUDE_PATH )
 		MESSAGE( STATUS "Looking for OpenCV2.2 or greater - found")

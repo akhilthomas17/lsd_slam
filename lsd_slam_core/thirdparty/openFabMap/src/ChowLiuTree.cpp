@@ -27,6 +27,7 @@
 ------------------------------------------------------------------------*/
 
 #include "../include/openfabmap.hpp"
+#include <map>
 
 using std::vector;
 using std::list;
