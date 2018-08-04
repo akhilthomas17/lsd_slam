@@ -118,26 +118,29 @@ void ROSOutput3DWrapper::publishKeyframe(Frame* f)
 
 	keyframe_publisher.publish(fMsg);
 
-	reinforced_visual_slam::keyframeMsgSiasa kfMsg;
-	
-	kfMsg.id = f->id();
-	kfMsg.time = f->timestamp();
-	
-	memcpy(kfMsg.camToWorld.data(),f->getScaledCamToWorld().cast<float>().data(),sizeof(float)*7);
-	
-	kfMsg.fx = f->fx(publishLvl);
-	kfMsg.fy = f->fy(publishLvl);
-	kfMsg.cx = f->cx(publishLvl);
-	kfMsg.cy = f->cy(publishLvl);
-	kfMsg.width = w;
-	kfMsg.height = h;
+	if(predictDepth || useGtDepth)
+	{
+		reinforced_visual_slam::keyframeMsgSiasa kfMsg;
+		
+		kfMsg.id = f->id();
+		kfMsg.time = f->timestamp();
+		
+		memcpy(kfMsg.camToWorld.data(),f->getScaledCamToWorld().cast<float>().data(),sizeof(float)*7);
+		
+		kfMsg.fx = f->fx(publishLvl);
+		kfMsg.fy = f->fy(publishLvl);
+		kfMsg.cx = f->cx(publishLvl);
+		kfMsg.cy = f->cy(publishLvl);
+		kfMsg.width = w;
+		kfMsg.height = h;
 
-	kfMsg.rgb = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(f->rgbMat()) ).toImageMsg());
-	if (predictDepth)
-		kfMsg.depth = *(cv_bridge::CvImage( std_msgs::Header(),"32FC1",*(f->depthMat()) ).toImageMsg());
-	else if (!useGtDepth)
-		kfMsg.depth = *(cv_bridge::CvImage( std_msgs::Header(),"32FC1",*(f->depthGTMat()) ).toImageMsg());
-	siasa_publisher.publish(kfMsg);
+		kfMsg.rgb = *(cv_bridge::CvImage( std_msgs::Header(),"bgr8",*(f->rgbMat()) ).toImageMsg());
+		if (predictDepth)
+			kfMsg.depth = *(cv_bridge::CvImage( std_msgs::Header(),"32FC1",*(f->depthMat()) ).toImageMsg());
+		else if (useGtDepth)
+			kfMsg.depth = *(cv_bridge::CvImage( std_msgs::Header(),"32FC1",*(f->depthGTMat()) ).toImageMsg());
+		siasa_publisher.publish(kfMsg);
+	}
 
 }
 

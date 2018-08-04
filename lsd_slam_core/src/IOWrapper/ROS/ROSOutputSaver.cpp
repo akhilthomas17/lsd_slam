@@ -81,7 +81,7 @@ void ROSOutputSaver::publishKeyframe(Frame* f)
 			if (*(idepthFloat + ii) > 0 && *(idepthVarFloat + ii)>0)
 			{
 				*(idepthData+ii) = *(idepthFloat+ii)/scale;
-				*(idepthVarData+ii) = *(idepthVarFloat+ii)/scale;
+				*(idepthVarData+ii) = *(idepthVarFloat+ii)/(scale * scale);
 				if(*(idepthData+ii) > maxDepth)
 					maxDepth = *(idepthData+ii);
 				if(*(idepthVarData+ii) > maxDepthVar)
