@@ -22,11 +22,13 @@ DeepTAMTracker::DeepTAMTracker(int w, int h, Eigen::Matrix3f K) : SE3Tracker(w, 
     client = nh.serviceClient<reinforced_visual_slam::TrackImage>("track_image");
     status = nh.serviceClient<reinforced_visual_slam::TrackerStatus>("tracker_status");
     //sub = nh.subscribe("tracker_status", 1, &DeepTAMTracker::statusCallback, this);
-    while(!ros::service::exists("track_image", false)){
+    if(useGtDepth or predictDepth){
+        while(!ros::service::exists("track_image", false)){
+            sleep(2);
+            printf("Waiting for DeepTAM to start..\n" );
+        }
         sleep(2);
-        printf("Waiting for DeepTAM to start..\n" );
     }
-    sleep(2);
     printf("Started DeepTAMTracker\n");
     //trackerStatus = false;
 }

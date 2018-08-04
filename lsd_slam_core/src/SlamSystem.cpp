@@ -103,7 +103,6 @@ SlamSystem::SlamSystem(int w, int h, Eigen::Matrix3f K, bool enableSLAM)
 	lastTrackingClosenessScore = 0;
 
 	thread_mapping = boost::thread(&SlamSystem::mappingThreadLoop, this);
-
 	if(SLAMEnabled)
 	{
 		thread_constraint_search = boost::thread(&SlamSystem::constraintSearchThreadLoop, this);

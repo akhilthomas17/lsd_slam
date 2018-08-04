@@ -153,7 +153,7 @@ bool SlamSystemReinforced::initFromPrediction(cv::Mat& rgb, cv::Mat& gtDepth, do
 			cv_bridge::CvImagePtr resImage;
 			try
 			{
-				cvImage = cv_bridge::toCvCopy(srv.response.residual, "");
+				resImage = cv_bridge::toCvCopy(srv.response.residual, "");
 			}
 			catch (cv_bridge::Exception& e)
 			{
@@ -248,14 +248,16 @@ void SlamSystemReinforced::trackFrame(cv::Mat& rgb, cv::Mat& depthGt, unsigned i
 	Sophus::Quaternionf quat = newRefToFrame_poseUpdate.unit_quaternion().cast<float>();
 	Eigen::Vector3f trans = newRefToFrame_poseUpdate.translation().cast<float>();
 
-	printf("DeepTAMTracker: %f %f %f %f %f %f %f\n",
-                        trans[0],
-                        trans[1],
-                        trans[2],
-                        quat.x(),
-                        quat.y(),
-                        quat.z(),
-                        quat.w());
+	if(enablePrintDebugInfo && printThreadingInfo){
+		printf("DeepTAMTracker: %f %f %f %f %f %f %f\n",
+	                        trans[0],
+	                        trans[1],
+	                        trans[2],
+	                        quat.x(),
+	                        quat.y(),
+	                        quat.z(),
+	                        quat.w());
+	}
 
 
 	tracking_lastResidual = tracker->lastResidual;
@@ -295,23 +297,26 @@ void SlamSystemReinforced::trackFrame(cv::Mat& rgb, cv::Mat& depthGt, unsigned i
 		printf("distSquare: %f\n",distSquare );
 		printf("angle: %f\n",angle );
 	}
+	
+	if(doSlam && !useGtDepth){
 
-	unmappedTrackedFramesMutex.lock();
-	if(unmappedTrackedFrames.size() < 50 || (unmappedTrackedFrames.size() < 100 && trackingNewFrame->getTrackingParent()->numMappedOnThisTotal < 10))
-		unmappedTrackedFrames.push_back(trackingNewFrame);
-	unmappedTrackedFramesSignal.notify_one();
-	unmappedTrackedFramesMutex.unlock();
+		unmappedTrackedFramesMutex.lock();
+		if(unmappedTrackedFrames.size() < 50 || (unmappedTrackedFrames.size() < 100 && trackingNewFrame->getTrackingParent()->numMappedOnThisTotal < 10))
+			unmappedTrackedFrames.push_back(trackingNewFrame);
+		unmappedTrackedFramesSignal.notify_one();
+		unmappedTrackedFramesMutex.unlock();
 
-	// implement blocking
-	if(blockUntilMapped)
-	{
-		boost::unique_lock<boost::mutex> lock(newFrameMappedMutex);
-		while((unmappedTrackedFrames.size() > 0 ))
+		// implement blocking
+		if(blockUntilMapped)
 		{
-			printf("TRACKING IS BLOCKING, waiting for %d frames to finish mapping.\n", (int)unmappedTrackedFrames.size());
-			newFrameMappedSignal.wait(lock);
+			boost::unique_lock<boost::mutex> lock(newFrameMappedMutex);
+			while((unmappedTrackedFrames.size() > 0 ))
+			{
+				printf("TRACKING IS BLOCKING, waiting for %d frames to finish mapping.\n", (int)unmappedTrackedFrames.size());
+				newFrameMappedSignal.wait(lock);
+			}
+			lock.unlock();
 		}
-		lock.unlock();
 	}
 }
 
