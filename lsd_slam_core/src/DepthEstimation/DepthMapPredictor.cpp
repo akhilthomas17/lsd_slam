@@ -326,9 +326,9 @@ void DepthMapPredictor::createKeyFrame(Frame* new_keyframe)
     // Initialize from ground truth
     activeKeyFrame = new_keyframe;
     activeKeyFramelock = activeKeyFrame->getActiveLock();
-    activeKeyFrameImageData = new_keyframe->image(0);
+    activeKeyFrameImageData = activeKeyFrame->image(0);
     activeKeyFrameIsReactivated = false;
-    cv::Mat kfGtDepth = new_keyframe->depthGTMat()->clone()/prev_scale;
+    cv::Mat kfGtDepth = activeKeyFrame->depthGTMat()->clone()/prev_scale;
     activeKeyFrame->setDepthFromGroundTruth(reinterpret_cast<float*>(kfGtDepth.data));
     initializeFromGTDepth(activeKeyFrame);
   }

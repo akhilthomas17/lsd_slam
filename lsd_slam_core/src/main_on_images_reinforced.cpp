@@ -305,6 +305,10 @@ int main( int argc, char** argv )
 	}
 	ros::param::del("~waitOnStart");
 
+	bool noDeepTAM = false;
+	if(ros::param::get("~noDeepTAM", noDeepTAM))
+		printf("noDeepTAM: %d\n", noDeepTAM);
+
 	if(!ros::param::get("~files", source))
 	{
 		printf("need source rgb_files! (set using _files:=FOLDER)\n");
@@ -437,7 +441,7 @@ int main( int argc, char** argv )
         } 
         else
         {
-        	if(useGtDepth || predictDepth)
+        	if((useGtDepth || predictDepth) && !noDeepTAM)
         		system->trackFrame(image, depthImg, runningIDX, hz == 0, fakeTimeStamp);
         	else
         		system->trackFrameLSD(image, depthImg, runningIDX, hz == 0, fakeTimeStamp);
